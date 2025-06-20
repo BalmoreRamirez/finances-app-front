@@ -29,6 +29,12 @@ export const useFinanceStore = defineStore('finance', {
                 fecha: '2025-06-20'
             },
         ],
+        gastosFijos: [
+            {id: 'f1', descripcion: 'Renta Mensual', monto: 7500, categoria: 'Vivienda', diaPago: 1},
+            {id: 'f2', descripcion: 'Plan Internet/Telefonía', monto: 550, categoria: 'Servicios', diaPago: 15},
+            {id: 'f3', descripcion: 'Suscripción Gimnasio', monto: 600, categoria: 'Entretenimiento', diaPago: 5},
+            {id: 'f4', descripcion: 'Seguro de Auto', monto: 800, categoria: 'Transporte', diaPago: 20},
+        ],
         inversiones: [
             {
                 id: 2,
@@ -169,7 +175,21 @@ export const useFinanceStore = defineStore('finance', {
             if (cuenta) cuenta.saldo += gasto.monto;
             this.gastos.splice(index, 1);
         },
+        addGastoFijo(gastoFijo) {
+            const newId = 'f' + (this.gastosFijos.length + 1);
+            this.gastosFijos.push({...gastoFijo, id: newId});
+        },
 
+        updateGastoFijo(gastoFijo) {
+            const index = this.gastosFijos.findIndex(g => g.id === gastoFijo.id);
+            if (index !== -1) {
+                this.gastosFijos[index] = {...gastoFijo};
+            }
+        },
+
+        deleteGastoFijo(id) {
+            this.gastosFijos = this.gastosFijos.filter(g => g.id !== id);
+        },
         // --- ACCIONES DE INVERSIONES ---
         addInversion(inversion) {
             this.inversiones.push({id: Date.now(), ...inversion});
