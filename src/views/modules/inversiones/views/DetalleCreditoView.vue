@@ -1,7 +1,7 @@
 <script setup>
 import {ref, computed, onMounted} from 'vue';
 import {useRoute, useRouter} from 'vue-router';
-import {useFinanceStore} from '../stores/financeStore';
+import {useFinanceStore} from '../../../../stores/financeStore.js';
 import {storeToRefs} from 'pinia';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';

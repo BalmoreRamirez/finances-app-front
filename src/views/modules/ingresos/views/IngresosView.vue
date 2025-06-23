@@ -1,6 +1,6 @@
 <script setup>
 import {ref} from 'vue';
-import {useFinanceStore} from '../stores/financeStore.js';
+import {useFinanceStore} from '../../../../stores/financeStore.js';
 import {storeToRefs} from 'pinia';
 import {useConfirm} from "primevue/useconfirm";
 
@@ -11,6 +11,9 @@ import ConfirmDialog from 'primevue/confirmdialog';
 const store = useFinanceStore();
 const confirm = useConfirm();
 
+const {ingresos, cuentas} = storeToRefs(store);
+const {deleteIngreso, addIngreso, updateIngreso} = store;
+
 const showModal = ref(false);
 const ingresoToEdit = ref(null);
 
@@ -18,8 +21,6 @@ const formatCurrency = (value) => {
   return new Intl.NumberFormat('es-MX', {style: 'currency', currency: 'MXN'}).format(value);
 };
 
-const {ingresos, cuentas} = storeToRefs(store);
-const {deleteIngreso, addIngreso, updateIngreso} = store;
 const openCreateModal = () => {
   ingresoToEdit.value = null;
   showModal.value = true;
@@ -40,16 +41,16 @@ const deleteIngresoConfir = (id) => {
       deleteIngreso(id);
     },
     reject: () => {
-      // No hacer nada si el usuario cancela
+      deleteIngreso(id);
     }
   });
 };
 
 const handleSaveIngreso = (nuevoIngreso) => {
   if (nuevoIngreso.id) {
-    updateIngreso(ingresoData);
+    updateIngreso(nuevoIngreso);
   } else {
-    addIngreso(ingresoData);
+    addIngreso(nuevoIngreso);
   }
   showModal.value = false;
   ingresoToEdit.value = null;
@@ -123,7 +124,12 @@ const handleSaveIngreso = (nuevoIngreso) => {
     </div>
 
     <!-- Modal para agregar o editar ingreso -->
-    <IngresoModal :show="showModal" :ingresoToEdit="ingresoToEdit" @close="showModal = false"
-                  @save="handleSaveIngreso"/>
+    <IngresoModal
+        :show="showModal"
+        :ingresoToEdit="ingresoToEdit"
+        :cuentas="cuentas"
+        @close="showModal = false"
+        @save="handleSaveIngreso"
+    />
   </div>
 </template>

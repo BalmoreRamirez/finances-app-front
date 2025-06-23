@@ -8,7 +8,11 @@ import Dropdown from 'primevue/dropdown';
 
 const props = defineProps({
   show: Boolean,
-  ingresoToEdit: Object
+  ingresoToEdit: Object,
+  cuentas: {
+    type: Array,
+    default: () => []
+  }
 });
 
 const emit = defineEmits(['close', 'save']);

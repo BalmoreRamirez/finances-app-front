@@ -1,6 +1,6 @@
 <script setup>
 import {ref} from 'vue';
-import {useFinanceStore} from '../stores/financeStore';
+import {useFinanceStore} from '../../../../stores/financeStore.js';
 import {storeToRefs} from 'pinia';
 import {useConfirm} from "primevue/useconfirm";
 import Button from 'primevue/button';

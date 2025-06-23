@@ -1,7 +1,7 @@
 <script setup>
   import { ref, onMounted, computed, watch } from 'vue';
   import Chart from 'chart.js/auto';
-  import { useFinanceStore } from '../stores/financeStore';
+  import { useFinanceStore } from '../../../../stores/financeStore.js';
   import { storeToRefs } from 'pinia';
 
   const store = useFinanceStore();

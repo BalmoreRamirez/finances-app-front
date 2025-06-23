@@ -1,6 +1,6 @@
 <script setup>
 import {ref, computed} from 'vue';
-import {useFinanceStore} from '../stores/financeStore.js';
+import {useFinanceStore} from '../../../../stores/financeStore.js';
 import {storeToRefs} from 'pinia';
 // CORRECCIÓN 1: Ruta de importación ajustada
 import InversionModal from '../components/InversionModal.vue';
