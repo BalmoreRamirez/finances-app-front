@@ -1,36 +1,44 @@
 <script setup>
-import {ref, computed} from 'vue';
-import {useFinanceStore} from '../../../../stores/financeStore.js';
-import {storeToRefs} from 'pinia';
-// CORRECCIÓN 1: Ruta de importación ajustada
-import InversionModal from '../components/InversionModal.vue';
+// Vue
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+
+// Librerías de terceros
+import { storeToRefs } from 'pinia';
+import { useConfirm } from "primevue/useconfirm";
+
+// Stores
+import { useFinanceStore } from '../../../../stores/financeStore.js';
+
+// Componentes
 import Button from 'primevue/button';
 import ConfirmDialog from 'primevue/confirmdialog';
-import {useConfirm} from "primevue/useconfirm";
 import Dropdown from 'primevue/dropdown';
-import {useRouter} from 'vue-router';
+import InversionModal from '../components/InversionModal.vue';
+import Tag from 'primevue/tag';
+import Tooltip from 'primevue/tooltip';
 
+// Inicialización
 const router = useRouter();
 const confirm = useConfirm();
 const store = useFinanceStore();
-const {inversiones, cuentas} = storeToRefs(store);
-const {deleteInversion, addInversion, updateInversion} = store;
+const { deleteInversion, addInversion, updateInversion } = store;
 
+// State reactivo del store
+const { inversiones, totalGanancias, totalInvertidoActivo } = storeToRefs(store);
+
+// State local del componente
 const showModal = ref(false);
 const isEditMode = ref(false);
 const inversionToEdit = ref(null);
 const filtroTipo = ref('todos');
-
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('es-MX', {style: 'currency', currency: 'MXN'}).format(value);
-};
-
 const tiposFiltro = ref([
-  {label: 'Todas', value: 'todos'},
-  {label: 'Compra-Venta', value: 'compraventa'},
-  {label: 'Créditos', value: 'credito'}
+  { label: 'Todas', value: 'todos' },
+  { label: 'Compra-Venta', value: 'compraventa' },
+  { label: 'Créditos', value: 'credito' }
 ]);
 
+// Propiedades computadas
 const inversionesFiltradas = computed(() => {
   if (filtroTipo.value === 'todos') {
     return inversiones.value;
@@ -38,20 +46,16 @@ const inversionesFiltradas = computed(() => {
   return inversiones.value.filter(inv => inv.tipo === filtroTipo.value);
 });
 
-// Estadísticas
 const totalInvertido = computed(() => {
-  return inversiones.value.reduce((sum, inv) => sum + inv.montoInvertido, 0);
+  return inversiones.value.reduce((sum, inv) => sum + (inv.montoInvertido || 0), 0);
 });
 
-const totalGanancias = computed(() => store.totalGanancias);
+// Métodos
+const formatCurrency = (value) => {
+  if (typeof value !== 'number') return '$0.00';
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
+};
 
-const inversionesActivas = computed(() => {
-  return inversiones.value.filter(inv => inv.estado === 'activa');
-});
-
-const totalInversionesActivas = computed(() => store.totalInvertidoActivo);
-
-// CORRECCIÓN 2: Inicializar con un objeto por defecto en lugar de null
 const openCreateModal = () => {
   isEditMode.value = false;
   inversionToEdit.value = {
@@ -60,7 +64,7 @@ const openCreateModal = () => {
     tipo: 'credito',
     descripcion: '',
     beneficiario: '',
-    montoInvertido: 0,
+    montoInvertido: null,
     interes: 0,
     montoTotal: 0,
     ganancia: 0,
@@ -73,20 +77,8 @@ const openCreateModal = () => {
 
 const openEditModal = (inversion) => {
   isEditMode.value = true;
-  inversionToEdit.value = {...inversion};
+  inversionToEdit.value = { ...inversion };
   showModal.value = true;
-};
-
-const handleDeleteInversion = (id) => {
-  confirm.require({
-    message: '¿Estás seguro de que deseas eliminar esta inversión?',
-    header: 'Confirmar eliminación',
-    icon: 'pi pi-exclamation-triangle',
-    acceptClass: 'p-button-danger',
-    accept: () => {
-      deleteInversion(id);
-    },
-  });
 };
 
 const handleSaveInversion = (inversionData) => {
@@ -98,36 +90,35 @@ const handleSaveInversion = (inversionData) => {
   showModal.value = false;
 };
 
-const getEstadoClass = (estado) => {
-  switch (estado) {
-    case 'activa':
-      return 'bg-blue-100 text-blue-800';
-    case 'finalizada':
-      return 'bg-green-100 text-green-800';
-    case 'pagada':
-      return 'bg-green-100 text-green-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
+const handleDeleteInversion = (id) => {
+  confirm.require({
+    message: '¿Estás seguro de que deseas eliminar esta inversión? Esta acción no se puede deshacer.',
+    header: 'Confirmar eliminación',
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-danger',
+    accept: () => {
+      deleteInversion(id);
+    },
+  });
 };
 
-const getEstadoText = (estado) => {
+const verDetalleCredito = (inversion) => {
+  router.push({ name: 'detalle-credito', params: { id: inversion.id } });
+};
+
+const getEstadoTag = (estado) => {
   switch (estado) {
-    case 'activa':
-      return 'Activa';
-    case 'finalizada':
-      return 'Finalizada';
-    case 'pagada':
-      return 'Pagada';
-    default:
-      return estado;
+    case 'activa': return { severity: 'info', text: 'Activa' };
+    case 'pagada': return { severity: 'success', text: 'Pagada' };
+    case 'finalizada': return { severity: 'success', text: 'Finalizada' };
+    case 'vencida': return { severity: 'danger', text: 'Vencida' };
+    default: return { severity: 'secondary', text: 'Otro' };
   }
 };
 </script>
 
 <template>
   <div class="space-y-6">
-    <!-- Componente de confirmación -->
     <ConfirmDialog/>
 
     <!-- Cabecera -->
@@ -136,58 +127,45 @@ const getEstadoText = (estado) => {
         <h1 class="text-3xl font-bold text-gray-800">Gestión de Inversiones</h1>
         <p class="text-gray-500 mt-1">Administra tus inversiones y créditos otorgados.</p>
       </div>
-      <button @click="openCreateModal"
-              class="flex items-center gap-2 bg-green-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-green-700 transition-colors">
-        <span class="material-icons">add_circle_outline</span>
-        <span>Registrar Inversión</span>
-      </button>
+      <Button @click="openCreateModal" label="Registrar Inversión" icon="pi pi-plus" severity="success"/>
     </div>
 
     <!-- Resumen estadístico -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white p-4 rounded-lg shadow-md">
-        <div class="flex items-center">
-          <div class="rounded-full bg-blue-100 p-3">
-            <span class="material-icons text-blue-600">account_balance</span>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Total Invertido</p>
-            <p class="text-xl font-bold text-gray-800">{{ formatCurrency(totalInvertido) }}</p>
-          </div>
+      <div class="bg-white p-4 rounded-lg shadow-md flex items-center">
+        <div class="rounded-full bg-blue-100 p-3 flex items-center justify-center">
+          <i class="pi pi-wallet text-xl text-blue-600"></i>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm text-gray-500">Total Invertido</p>
+          <p class="text-xl font-bold text-gray-800">{{ formatCurrency(totalInvertido) }}</p>
         </div>
       </div>
-
-      <div class="bg-white p-4 rounded-lg shadow-md">
-        <div class="flex items-center">
-          <div class="rounded-full bg-green-100 p-3">
-            <span class="material-icons text-green-600">trending_up</span>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Ganancias Totales</p>
-            <p class="text-xl font-bold text-green-600">{{ formatCurrency(totalGanancias) }}</p>
-          </div>
+      <div class="bg-white p-4 rounded-lg shadow-md flex items-center">
+        <div class="rounded-full bg-green-100 p-3 flex items-center justify-center">
+          <i class="pi pi-chart-line text-xl text-green-600"></i>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm text-gray-500">Ganancias Potenciales</p>
+          <p class="text-xl font-bold text-gray-800">{{ formatCurrency(totalGanancias) }}</p>
         </div>
       </div>
-
-      <div class="bg-white p-4 rounded-lg shadow-md">
-        <div class="flex items-center">
-          <div class="rounded-full bg-amber-100 p-3">
-            <span class="material-icons text-amber-600">schedule</span>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Inversiones Activas</p>
-            <p class="text-xl font-bold text-gray-800">{{ inversionesActivas.length }}
-              ({{ formatCurrency(totalInversionesActivas) }})</p>
-          </div>
+      <div class="bg-white p-4 rounded-lg shadow-md flex items-center">
+        <div class="rounded-full bg-amber-100 p-3 flex items-center justify-center">
+          <i class="pi pi-bolt text-xl text-amber-600"></i>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm text-gray-500">Inversiones Activas</p>
+          <p class="text-xl font-bold text-gray-800">{{ formatCurrency(totalInvertidoActivo) }}</p>
         </div>
       </div>
     </div>
 
     <!-- Filtros -->
     <div class="flex justify-end">
-      <div class="w-72">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por tipo:</label>
-        <Dropdown v-model="filtroTipo" :options="tiposFiltro" optionLabel="label" optionValue="value" class="w-full"/>
+      <div class="w-full md:w-72">
+        <label for="filtro-tipo" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por tipo:</label>
+        <Dropdown v-model="filtroTipo" :options="tiposFiltro" optionLabel="label" optionValue="value" placeholder="Seleccionar tipo" class="w-full"/>
       </div>
     </div>
 
@@ -197,85 +175,31 @@ const getEstadoText = (estado) => {
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
           <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Tipo
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Descripción
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Monto
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Ganancia
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Fecha
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Estado
-            </th>
-            <th scope="col" class="relative px-6 py-3">
-              <span class="sr-only">Acciones</span>
-            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto Invertido</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
           </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="inversion in inversionesFiltradas" :key="inversion.id" class="hover:bg-gray-50">
+          <tr v-if="inversionesFiltradas.length === 0">
+            <td colspan="5" class="text-center py-10 text-gray-500">No hay inversiones que coincidan con el filtro.</td>
+          </tr>
+          <tr v-for="inversion in inversionesFiltradas" :key="inversion.id">
             <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                              :class="inversion.tipo === 'compraventa' ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'">
-                          {{ inversion.tipo === 'compraventa' ? 'Compra-Venta' : 'Crédito' }}
-                        </span>
-            </td>
-            <td class="px-6 py-4">
               <div class="text-sm font-medium text-gray-900">{{ inversion.descripcion }}</div>
-              <div v-if="inversion.tipo === 'credito'" class="text-xs text-gray-500">
-                Beneficiario: {{ inversion.beneficiario }}
-              </div>
+              <div class="text-sm text-gray-500">{{ inversion.beneficiario }}</div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm font-medium text-gray-900">{{ formatCurrency(inversion.montoInvertido) }}</div>
-              <div v-if="inversion.tipo === 'credito'" class="text-xs text-gray-600">
-                Total: {{ formatCurrency(inversion.montoTotal) }}
-              </div>
+            <td class="px-6 py-4 whitespace-nowrap text-sm capitalize text-gray-500">{{ inversion.tipo }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-800">{{ formatCurrency(inversion.montoInvertido) }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-center">
+              <Tag :severity="getEstadoTag(inversion.estado).severity" :value="getEstadoTag(inversion.estado).text" rounded/>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div v-if="inversion.ganancia" class="text-sm text-green-600 font-semibold">
-                {{ formatCurrency(inversion.ganancia) }}
-              </div>
-              <div v-else class="text-sm text-gray-500 italic">Pendiente</div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-gray-600">
-                {{ inversion.tipo === 'credito' ? 'Préstamo:' : 'Inversión:' }} {{ inversion.fechaInversion }}
-              </div>
-              <div class="text-xs text-gray-500">
-                <template v-if="inversion.tipo === 'credito'">
-                  Vencimiento: {{ inversion.fechaVencimiento }}
-                </template>
-                <template v-else>
-                  <span v-if="inversion.fechaRetorno">Retorno: {{ inversion.fechaRetorno }}</span>
-                  <span v-else>Retorno: Pendiente</span>
-                </template>
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                              :class="getEstadoClass(inversion.estado)">
-                          {{ getEstadoText(inversion.estado) }}
-                        </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-              <Button v-if="inversion.tipo === 'credito'"
-                      icon="pi pi-list"
-                      severity="success"
-                      text
-                      @click="router.push(`/creditos/${inversion.id}`)"
-                      v-tooltip.top="'Ver detalle de cuotas'"
-              />
-              <Button icon="pi pi-pencil" severity="info" text @click="openEditModal(inversion)"/>
-              <Button icon="pi pi-trash" severity="danger" text @click="handleDeleteInversion(inversion.id)"/>
+            <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
+              <Button v-if="inversion.tipo === 'credito'" icon="pi pi-eye" severity="info" text rounded @click="verDetalleCredito(inversion)" v-tooltip.top="'Ver Detalles'"/>
+              <Button icon="pi pi-pencil" severity="warning" text rounded @click="openEditModal(inversion)" v-tooltip.top="'Editar'"/>
+              <Button icon="pi pi-trash" severity="danger" text rounded @click="handleDeleteInversion(inversion.id)" v-tooltip.top="'Eliminar'"/>
             </td>
           </tr>
           </tbody>
@@ -284,11 +208,6 @@ const getEstadoText = (estado) => {
     </div>
 
     <!-- Modal para agregar o editar inversión -->
-    <InversionModal
-        v-model:visible="showModal"
-        :is-edit-mode="isEditMode"
-        :inversion-data="inversionToEdit"
-        @save="handleSaveInversion"
-    />
+    <InversionModal v-model:visible="showModal" :is-edit-mode="isEditMode" :inversion-data="inversionToEdit" @save="handleSaveInversion"/>
   </div>
 </template>

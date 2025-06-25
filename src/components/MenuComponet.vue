@@ -24,16 +24,15 @@ const menuItems = [
     ]
   },
   {
-    category: 'Gestión',
-    items: [
-      {name: 'Ingresos', route: '/ingresos', icon: 'trending_up'},
-      {name: 'Gastos', route: '/gastos', icon: 'trending_down'}
-    ]
-  },
-  {
     category: 'Cuentas',
     items: [
       {name: 'Cuentas', route: '/cuentas', icon: 'account_balance'},
+    ]
+  },
+  {
+    category: 'Transacciones',
+    items: [
+      {name: 'Transacciones', route: '/transacciones', icon: 'swap_horiz'},
     ]
   },
   {
@@ -42,12 +41,6 @@ const menuItems = [
       {name: 'Inversiones', route: '/inversiones', icon: 'attach_money'},
     ]
   },
-  {
-    category: 'Configuración',
-    items: [
-      {name: 'Ajustes', route: '/ajustes', icon: 'settings'}
-    ]
-  }
 ];
 </script>
 

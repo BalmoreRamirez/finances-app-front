@@ -1,27 +1,26 @@
 import {createApp} from 'vue';
-import PrimeVue from 'primevue/config';
 import {createPinia} from "pinia";
 import App from './App.vue';
-import ConfirmDialog from 'primevue/confirmdialog';
-import ToastService from "primevue/toastservice";
-import ConfirmationService from 'primevue/confirmationservice';
-import Tailwind from 'primevue/passthrough/tailwind';
-import 'primeicons/primeicons.css';
-
-import Toast from "primevue/toast";
 import router from './router';
 
-import './style.css';
-import 'primevue/resources/themes/lara-light-teal/theme.css';
+import PrimeVue from 'primevue/config';
+import ConfirmationService from 'primevue/confirmationservice';
+import ConfirmDialog from 'primevue/confirmdialog';
+import ToastService from "primevue/toastservice";
+import Toast from "primevue/toast";
+import Tailwind from 'primevue/passthrough/tailwind';
 
-const pinia = createPinia();
+import 'primeicons/primeicons.css';
+import 'primevue/resources/themes/lara-light-teal/theme.css';
+import './style.css';
+
 const app = createApp(App);
+const pinia = createPinia();
+
 app.use(pinia);
 app.use(router);
-app.use(ConfirmationService);
-app.component('ConfirmDialog', ConfirmDialog);
 app.use(ToastService);
-app.component('Toast', Toast);
+app.use(ConfirmationService);
 app.use(PrimeVue, {
     unstyled: false,
     pt: Tailwind
