@@ -63,6 +63,7 @@
         :transaccion-to-edit="transaccionToEdit"
         :cuentas="cuentas"
         :deudas="deudas"
+        :categorias="categoriasTransaccion"
         @save="handleSave"
     />
   </div>
@@ -80,7 +81,7 @@ import ConfirmDialog from 'primevue/confirmdialog';
 const store = useFinanceStore();
 const confirm = useConfirm();
 
-const {transacciones, cuentas, deudas} = storeToRefs(store);
+const {transacciones, cuentas, deudas, categoriasTransaccion} = storeToRefs(store);
 const {addTransaccion, updateTransaccion, deleteTransaccion} = store;
 
 const showModal = ref(false);
@@ -118,7 +119,7 @@ const handleSave = (data) => {
   if (data.id) {
     updateTransaccion(data);
   } else {
-    addTransaccion(data);
+    addTransaccion({...data, id: Date.now()});
   }
   showModal.value = false;
 };
