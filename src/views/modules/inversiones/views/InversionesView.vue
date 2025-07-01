@@ -1,16 +1,10 @@
 <script setup>
-// Vue
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-
-// Librerías de terceros
-import { storeToRefs } from 'pinia';
-import { useConfirm } from "primevue/useconfirm";
-
-// Stores
-import { useFinanceStore } from '../../../../stores/financeStore.js';
-
-// Componentes
+import {ref, computed, onMounted} from 'vue';
+import {useRouter} from 'vue-router';
+import {storeToRefs} from 'pinia';
+import {useConfirm} from "primevue/useconfirm";
+import {useToast} from "primevue/usetoast";
+import {useFinanceStore} from '../../../../stores/financeStore.js';
 import Button from 'primevue/button';
 import ConfirmDialog from 'primevue/confirmdialog';
 import Dropdown from 'primevue/dropdown';
@@ -21,11 +15,12 @@ import Tooltip from 'primevue/tooltip';
 // Inicialización
 const router = useRouter();
 const confirm = useConfirm();
+const toast = useToast();
 const store = useFinanceStore();
-const { deleteInversion, addInversion, updateInversion } = store;
+const {deleteInversion, addInversion, updateInversion, fetchInvestments} = store;
 
 // State reactivo del store
-const { inversiones, totalGanancias, totalInvertidoActivo } = storeToRefs(store);
+const {inversiones, totalGanancias, totalInvertidoActivo} = storeToRefs(store);
 
 // State local del componente
 const showModal = ref(false);
@@ -33,10 +28,14 @@ const isEditMode = ref(false);
 const inversionToEdit = ref(null);
 const filtroTipo = ref('todos');
 const tiposFiltro = ref([
-  { label: 'Todas', value: 'todos' },
-  { label: 'Compra-Venta', value: 'compraventa' },
-  { label: 'Créditos', value: 'credito' }
+  {label: 'Todas', value: 'todos'},
+  {label: 'Compra-Venta', value: 'compraventa'},
+  {label: 'Créditos', value: 'credito'}
 ]);
+
+onMounted(() => {
+  fetchInvestments();
+});
 
 // Propiedades computadas
 const inversionesFiltradas = computed(() => {
@@ -53,7 +52,7 @@ const totalInvertido = computed(() => {
 // Métodos
 const formatCurrency = (value) => {
   if (typeof value !== 'number') return '$0.00';
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
+  return new Intl.NumberFormat('es-MX', {style: 'currency', currency: 'MXN'}).format(value);
 };
 
 const openCreateModal = () => {
@@ -77,16 +76,26 @@ const openCreateModal = () => {
 
 const openEditModal = (inversion) => {
   isEditMode.value = true;
-  inversionToEdit.value = { ...inversion };
+  inversionToEdit.value = {...inversion};
   showModal.value = true;
 };
 
-const handleSaveInversion = (inversionData) => {
-  if (inversionData.id) {
-    updateInversion(inversionData);
+const handleSaveInversion = async (inversionData) => {
+  let success = false;
+  const action = isEditMode.value ? 'actualizada' : 'creada';
+
+  if (isEditMode.value) {
+    success = await updateInversion(inversionData);
   } else {
-    addInversion(inversionData);
+    success = await addInversion(inversionData);
   }
+
+  if (success) {
+    toast.add({severity: 'success', summary: 'Éxito', detail: `Inversión ${action} correctamente.`, life: 3000});
+  } else {
+    toast.add({severity: 'error', summary: 'Error', detail: `No se pudo guardar la inversión.`, life: 3000});
+  }
+
   showModal.value = false;
 };
 
@@ -96,23 +105,33 @@ const handleDeleteInversion = (id) => {
     header: 'Confirmar eliminación',
     icon: 'pi pi-exclamation-triangle',
     acceptClass: 'p-button-danger',
-    accept: () => {
-      deleteInversion(id);
+    accept: async () => {
+      const success = await deleteInversion(id);
+      if (success) {
+        toast.add({severity: 'success', summary: 'Éxito', detail: 'Inversión eliminada.', life: 3000});
+      } else {
+        toast.add({severity: 'error', summary: 'Error', detail: 'No se pudo eliminar la inversión.', life: 3000});
+      }
     },
   });
 };
 
 const verDetalleCredito = (inversion) => {
-  router.push({ name: 'detalle-credito', params: { id: inversion.id } });
+  router.push({name: 'detalle-credito', params: {id: inversion.id}});
 };
 
 const getEstadoTag = (estado) => {
   switch (estado) {
-    case 'activa': return { severity: 'info', text: 'Activa' };
-    case 'pagada': return { severity: 'success', text: 'Pagada' };
-    case 'finalizada': return { severity: 'success', text: 'Finalizada' };
-    case 'vencida': return { severity: 'danger', text: 'Vencida' };
-    default: return { severity: 'secondary', text: 'Otro' };
+    case 'activa':
+      return {severity: 'info', text: 'Activa'};
+    case 'pagada':
+      return {severity: 'success', text: 'Pagada'};
+    case 'finalizada':
+      return {severity: 'success', text: 'Finalizada'};
+    case 'vencida':
+      return {severity: 'danger', text: 'Vencida'};
+    default:
+      return {severity: 'secondary', text: 'Otro'};
   }
 };
 </script>
@@ -165,7 +184,8 @@ const getEstadoTag = (estado) => {
     <div class="flex justify-end">
       <div class="w-full md:w-72">
         <label for="filtro-tipo" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por tipo:</label>
-        <Dropdown v-model="filtroTipo" :options="tiposFiltro" optionLabel="label" optionValue="value" placeholder="Seleccionar tipo" class="w-full"/>
+        <Dropdown v-model="filtroTipo" :options="tiposFiltro" optionLabel="label" optionValue="value"
+                  placeholder="Seleccionar tipo" class="w-full"/>
       </div>
     </div>
 
@@ -192,14 +212,20 @@ const getEstadoTag = (estado) => {
               <div class="text-sm text-gray-500">{{ inversion.beneficiario }}</div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm capitalize text-gray-500">{{ inversion.tipo }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-800">{{ formatCurrency(inversion.montoInvertido) }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-800">
+              {{ formatCurrency(inversion.montoInvertido) }}
+            </td>
             <td class="px-6 py-4 whitespace-nowrap text-center">
-              <Tag :severity="getEstadoTag(inversion.estado).severity" :value="getEstadoTag(inversion.estado).text" rounded/>
+              <Tag :severity="getEstadoTag(inversion.estado).severity" :value="getEstadoTag(inversion.estado).text"
+                   rounded/>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-              <Button v-if="inversion.tipo === 'credito'" icon="pi pi-eye" severity="info" text rounded @click="verDetalleCredito(inversion)" v-tooltip.top="'Ver Detalles'"/>
-              <Button icon="pi pi-pencil" severity="warning" text rounded @click="openEditModal(inversion)" v-tooltip.top="'Editar'"/>
-              <Button icon="pi pi-trash" severity="danger" text rounded @click="handleDeleteInversion(inversion.id)" v-tooltip.top="'Eliminar'"/>
+              <Button v-if="inversion.tipo === 'credito'" icon="pi pi-eye" severity="info" text rounded
+                      @click="verDetalleCredito(inversion)" v-tooltip.top="'Ver Detalles'"/>
+              <Button icon="pi pi-pencil" severity="warning" text rounded @click="openEditModal(inversion)"
+                      v-tooltip.top="'Editar'"/>
+              <Button icon="pi pi-trash" severity="danger" text rounded @click="handleDeleteInversion(inversion.id)"
+                      v-tooltip.top="'Eliminar'"/>
             </td>
           </tr>
           </tbody>
@@ -208,6 +234,7 @@ const getEstadoTag = (estado) => {
     </div>
 
     <!-- Modal para agregar o editar inversión -->
-    <InversionModal v-model:visible="showModal" :is-edit-mode="isEditMode" :inversion-data="inversionToEdit" @save="handleSaveInversion"/>
+    <InversionModal v-model:visible="showModal" :is-edit-mode="isEditMode" :inversion-data="inversionToEdit"
+                    @save="handleSaveInversion"/>
   </div>
 </template>

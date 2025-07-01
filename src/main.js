@@ -4,6 +4,7 @@ import App from './App.vue';
 import router from './router';
 
 import PrimeVue from 'primevue/config';
+import Tooltip from 'primevue/tooltip';
 import ConfirmationService from 'primevue/confirmationservice';
 import ConfirmDialog from 'primevue/confirmdialog';
 import ToastService from "primevue/toastservice";
@@ -19,6 +20,7 @@ const pinia = createPinia();
 
 app.use(pinia);
 app.use(router);
+app.directive('tooltip', Tooltip);
 app.use(ToastService);
 app.use(ConfirmationService);
 app.use(PrimeVue, {

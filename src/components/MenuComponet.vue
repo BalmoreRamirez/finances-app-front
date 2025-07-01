@@ -1,5 +1,5 @@
 <script setup>
-import {useRoute} from 'vue-router';
+import {useRoute, useRouter} from 'vue-router';
 
 defineProps({
   isMobileOpen: {
@@ -14,12 +14,13 @@ defineProps({
 const emit = defineEmits(['close-menu', 'toggle-collapse']);
 
 const route = useRoute();
+const router = useRouter();
 
 const menuItems = [
   {
     category: 'Principal',
     items: [
-      {name: 'Dashboard', route: '/', icon: 'dashboard'},
+      {name: 'Dashboard', route: '/dashboard', icon: 'dashboard'},
       {name: 'Reportes', route: '/reportes', icon: 'bar_chart'}
     ]
   },
@@ -42,6 +43,11 @@ const menuItems = [
     ]
   },
 ];
+const logout = () => {
+  localStorage.removeItem('token');
+  router.push('/');
+  emit('close-menu');
+};
 </script>
 
 <template>
@@ -116,6 +122,14 @@ const menuItems = [
             <p class="text-xs text-gray-400 hover:text-white whitespace-nowrap">Ver perfil</p>
           </div>
         </div>
+        <button
+            @click="logout"
+            class="w-full flex items-center mt-2 px-4 py-2.5 rounded-lg text-red-400 hover:bg-red-500 hover:text-white transition-colors duration-200 group"
+            :class="{ 'justify-center': collapsed }"
+        >
+          <span class="material-icons">logout</span>
+          <span v-if="!collapsed" class="ml-3 whitespace-nowrap">Cerrar Sesión</span>
+        </button>
       </div>
     </aside>
   </div>

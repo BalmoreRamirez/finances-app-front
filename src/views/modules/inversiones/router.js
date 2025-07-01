@@ -5,7 +5,7 @@ export default [
         component: () => import('./views/InversionesView.vue'),
     },
     {
-        path: '/inversiones/detalle/:id',
+        path: '/inversiones/:id',
         name: 'detalle-credito',
         component: () => import('./views/DetalleCreditoView.vue')
     }
