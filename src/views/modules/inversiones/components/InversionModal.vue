@@ -21,26 +21,36 @@ const emit = defineEmits(['update:visible', 'save']);
 
 // Store
 const store = useFinanceStore();
-const {cuentas, tiposInversion} = storeToRefs(store);
-const {fetchInvestmentTypes, fetchAccounts} = store;
+const {cuentas} = storeToRefs(store);
+const {fetchAccounts} = store;
 
 // State local
 const localInversion = ref({});
 const submitted = ref(false);
+const tiposInversion = ref([
+  {label: 'Crédito', value: 'credito'},
+  {label: 'Compra-Venta', value: 'compraventa'}
+]);
 
-// Cargar tipos de inversión al montar el componente
+// Cargar cuentas
 onMounted(() => {
-  if (tiposInversion.value.length === 0) {
-    fetchInvestmentTypes();
-  }
   if (cuentas.value.length === 0) {
     fetchAccounts();
   }
 });
 
+// Watcher para sincronizar props con el state local
 watch(() => props.inversionData, (newData) => {
   if (newData) {
-    localInversion.value = {...newData};
+    // Inicializa el estado local con los datos de la inversión
+    localInversion.value = {
+      ...newData,
+      // Asegura valores iniciales para los campos de compra-venta
+      cantidad: newData.cantidad || 1,
+      costoUnitario: newData.costoUnitario || (newData.tipo !== 'credito' ? newData.monto : 0) || 0,
+      gananciaUnitaria: newData.gananciaUnitaria || 0,
+    };
+    // Manejo de fechas para edición
     if (typeof newData.fechaInversion === 'string') {
       localInversion.value.fechaInversion = new Date(newData.fechaInversion + 'T00:00:00');
     }
@@ -48,38 +58,54 @@ watch(() => props.inversionData, (newData) => {
       localInversion.value.fechaVencimiento = new Date(newData.fechaVencimiento + 'T00:00:00');
     }
   }
-}, {deep: true});
+}, {deep: true, immediate: true});
 
-// Propiedad computada para obtener el nombre del tipo de inversión seleccionado
-const tipoSeleccionado = computed(() => {
-  const tipo = tiposInversion.value.find(t => t.value === localInversion.value.investment_type_id);
-  return tipo ? tipo.label.toLowerCase() : '';
+
+// --- LÓGICA DE CÁLCULO CENTRALIZADA ---
+
+// Calcula el monto total invertido basado en el tipo
+const montoCalculado = computed(() => {
+  const inv = localInversion.value;
+  if (inv.tipo === 'compraventa') {
+    return (inv.cantidad || 0) * (inv.costoUnitario || 0);
+  }
+  // Para 'credito', el monto se ingresa directamente
+  return inv.monto || 0;
 });
 
-// Propiedades computadas para cálculos automáticos
+// Calcula la ganancia estimada basada en el tipo
 const gananciaCalculada = computed(() => {
   const inv = localInversion.value;
-  if (!inv.montoInvertido || inv.montoInvertido <= 0) return 0;
-
-  if (tipoSeleccionado.value.includes('crédito')) {
-    return inv.montoInvertido * ((inv.interes || 0) / 100);
+  if (inv.tipo === 'credito') {
+    const monto = inv.monto || 0;
+    const interes = inv.interes || 0;
+    return monto * (interes / 100);
   }
-  // Puedes agregar más lógicas para otros tipos si es necesario
-  return inv.ganancia || 0;
+  if (inv.tipo === 'compraventa') {
+    return (inv.cantidad || 0) * (inv.gananciaUnitaria || 0);
+  }
+  return 0;
 });
 
+// Calcula el monto total a recibir
 const montoTotalCalculado = computed(() => {
-  return (localInversion.value.montoInvertido || 0) + gananciaCalculada.value;
+  return montoCalculado.value + gananciaCalculada.value;
 });
 
-watch([gananciaCalculada, montoTotalCalculado], ([newGanancia, newMontoTotal]) => {
+// Watcher para actualizar el objeto principal con los valores calculados
+watch([montoCalculado, gananciaCalculada, montoTotalCalculado], ([newMonto, newGanancia, newMontoTotal]) => {
+  // Solo actualiza el monto para compra-venta, para crédito es entrada manual
+  if (localInversion.value.tipo === 'compraventa') {
+    localInversion.value.monto = newMonto;
+  }
   localInversion.value.ganancia = newGanancia;
   localInversion.value.montoTotal = newMontoTotal;
 });
 
-// Métodos
+// --- MÉTODOS ---
+
 const formatCurrency = (value) => {
-  if (typeof value !== 'number') return '$0.00';
+  if (typeof value !== 'number' || isNaN(value)) return '$0.00';
   return new Intl.NumberFormat('es-MX', {style: 'currency', currency: 'MXN'}).format(value);
 };
 
@@ -90,23 +116,19 @@ const closeModal = () => {
 
 const saveInversion = () => {
   submitted.value = true;
-  // Validaciones
-  const isValid = localInversion.value.descripcion &&
-      localInversion.value.investment_type_id &&
-      localInversion.value.cuentaId &&
-      localInversion.value.montoInvertido > 0;
+  const inv = localInversion.value;
+  const isValid = inv.descripcion && inv.tipo && inv.cuentaId && inv.monto > 0;
 
-  if (!isValid) {
-    return;
-  }
+  if (!isValid) return;
 
-  if (localInversion.value.fechaInversion instanceof Date) {
-    localInversion.value.fechaInversion = localInversion.value.fechaInversion.toISOString().split('T')[0];
+  // Formatear fechas a string YYYY-MM-DD antes de emitir
+  if (inv.fechaInversion instanceof Date) {
+    inv.fechaInversion = inv.fechaInversion.toISOString().split('T')[0];
   }
-  if (localInversion.value.fechaVencimiento instanceof Date) {
-    localInversion.value.fechaVencimiento = localInversion.value.fechaVencimiento.toISOString().split('T')[0];
+  if (inv.fechaVencimiento instanceof Date) {
+    inv.fechaVencimiento = inv.fechaVencimiento.toISOString().split('T')[0];
   }
-  emit('save', localInversion.value);
+  emit('save', inv);
   closeModal();
 };
 </script>
@@ -116,64 +138,80 @@ const saveInversion = () => {
           :header="props.isEditMode ? 'Editar Inversión' : 'Registrar Inversión'" modal class="p-fluid"
           @update:visible="closeModal">
     <div class="space-y-6 p-4">
+      <!-- Campos Comunes -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label for="tipo" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Inversión</label>
-          <Dropdown id="tipo" v-model="localInversion.investment_type_id" :options="tiposInversion"
+          <Dropdown id="tipo" v-model="localInversion.tipo" :options="tiposInversion"
                     optionLabel="label" optionValue="value" placeholder="Selecciona un tipo"
-                    :class="{'p-invalid': submitted && !localInversion.investment_type_id}"/>
-          <small v-if="submitted && !localInversion.investment_type_id" class="p-error">El tipo es obligatorio.</small>
+                    :class="{'p-invalid': submitted && !localInversion.tipo}"/>
         </div>
         <div>
           <label for="cuentaId" class="block text-sm font-medium text-gray-700 mb-1">Cuenta de Origen</label>
           <Dropdown id="cuentaId" v-model="localInversion.cuentaId" :options="cuentas" optionLabel="nombre"
                     optionValue="id" placeholder="Selecciona una cuenta"
                     :class="{'p-invalid': submitted && !localInversion.cuentaId}"/>
-          <small v-if="submitted && !localInversion.cuentaId" class="p-error">La cuenta es obligatoria.</small>
         </div>
       </div>
-
       <div>
         <label for="descripcion" class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
         <InputText id="descripcion" v-model.trim="localInversion.descripcion" required
                    :class="{'p-invalid': submitted && !localInversion.descripcion}"/>
-        <small v-if="submitted && !localInversion.descripcion" class="p-error">La descripción es obligatoria.</small>
       </div>
-
-      <div v-if="tipoSeleccionado.includes('crédito')">
+      <div v-if="localInversion.tipo === 'credito'">
         <label for="beneficiario" class="block text-sm font-medium text-gray-700 mb-1">Beneficiario
           (Prestatario)</label>
         <InputText id="beneficiario" v-model.trim="localInversion.beneficiario"/>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Campos Condicionales para Compra-Venta -->
+      <div v-if="localInversion.tipo === 'compraventa'" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label for="montoInvertido" class="block text-sm font-medium text-gray-700 mb-1">Monto Invertido /
-            Costo</label>
-          <InputNumber id="montoInvertido" v-model="localInversion.montoInvertido" mode="currency" currency="MXN"
-                       locale="es-MX" required
-                       :class="{'p-invalid': submitted && !(localInversion.montoInvertido > 0)}"/>
-          <small v-if="submitted && !(localInversion.montoInvertido > 0)" class="p-error">El monto debe ser
-            positivo.</small>
+          <label for="cantidad" class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+          <InputNumber id="cantidad" v-model="localInversion.cantidad" :min="1"/>
         </div>
-        <div v-if="tipoSeleccionado.includes('crédito')">
+        <div>
+          <label for="costoUnitario" class="block text-sm font-medium text-gray-700 mb-1">Costo Unitario</label>
+          <InputNumber id="costoUnitario" v-model="localInversion.costoUnitario" mode="currency" currency="MXN"
+                       locale="es-MX"/>
+        </div>
+        <div>
+          <label for="gananciaUnitaria" class="block text-sm font-medium text-gray-700 mb-1">Ganancia Unitaria</label>
+          <InputNumber id="gananciaUnitaria" v-model="localInversion.gananciaUnitaria" mode="currency" currency="MXN"
+                       locale="es-MX"/>
+        </div>
+      </div>
+
+      <!-- Campos Condicionales para Crédito -->
+      <div v-if="localInversion.tipo === 'credito'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="monto" class="block text-sm font-medium text-gray-700 mb-1">Monto del Préstamo</label>
+          <InputNumber id="monto" v-model="localInversion.monto" mode="currency" currency="MXN" locale="es-MX" required
+                       :class="{'p-invalid': submitted && !(localInversion.monto > 0)}"/>
+        </div>
+        <div>
           <label for="interes" class="block text-sm font-medium text-gray-700 mb-1">Tasa de Interés (%)</label>
           <InputNumber id="interes" v-model="localInversion.interes" suffix=" %" :min="0"/>
         </div>
-        <!-- Puedes agregar un v-if para otros tipos de inversión aquí -->
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-3 rounded-md">
+      <!-- Resumen de Cálculos (siempre visible) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-3 rounded-md">
+        <div>
+          <p class="text-sm text-gray-500">Monto Total Invertido</p>
+          <p class="font-semibold text-gray-800">{{ formatCurrency(montoCalculado) }}</p>
+        </div>
         <div>
           <p class="text-sm text-gray-500">Ganancia Estimada</p>
           <p class="font-semibold text-green-600">{{ formatCurrency(gananciaCalculada) }}</p>
         </div>
         <div>
-          <p class="text-sm text-gray-500">Monto Total a Recibir / Venta</p>
+          <p class="text-sm text-gray-500">Monto Total a Recibir</p>
           <p class="font-semibold text-blue-600">{{ formatCurrency(montoTotalCalculado) }}</p>
         </div>
       </div>
 
+      <!-- Fechas -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label for="fechaInversion" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inversión /

@@ -62,13 +62,17 @@ const openCreateModal = () => {
   inversionToEdit.value = {
     id: null,
     cuentaId: null,
-    tipo: 'credito',
+    tipo: 'credito', // Tipo por defecto
     descripcion: '',
     beneficiario: '',
     monto: 0,
     interes: 0,
-    montoTotal: 0,
     ganancia: 0,
+    montoTotal: 0,
+    // Campos para compra-venta con valores por defecto
+    cantidad: 1,
+    costoUnitario: 0,
+    gananciaUnitaria: 0,
     fechaInversion: new Date().toISOString().split('T')[0],
     fechaVencimiento: '',
     estado: 'activa'
@@ -83,17 +87,8 @@ const openEditModal = (inversion) => {
 };
 
 const handleSaveInversion = async (inversionData) => {
-
-  if (inversionData.tipo === 'credito' && inversionData.monto && inversionData.interes) {
-    const monto = parseFloat(inversionData.monto);
-    const interes = parseFloat(inversionData.interes) / 100;
-    // Calcula el monto total a recibir (capital + interés)
-    inversionData.montoTotal = monto * (1 + interes);
-  } else {
-    // Para otros tipos de inversión o si no hay interés, el total es el monto.
-    inversionData.montoTotal = inversionData.monto;
-  }
-
+  // La lógica de cálculo ahora está completamente en el modal.
+  // Este método solo se encarga de llamar a la acción del store.
   let success = false;
   const action = isEditMode.value ? 'actualizada' : 'creada';
 
