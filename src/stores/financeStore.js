@@ -9,6 +9,7 @@ export const useFinanceStore = defineStore('finance', {
     state: () => ({
         inversionActual: null,
         cuentas: [],
+        pagos: [],
         tiposCuenta: [],
         inversiones: [],
         tiposInversion: [],
@@ -28,14 +29,6 @@ export const useFinanceStore = defineStore('finance', {
             monto: 12000,
             fecha: '2025-06-20'
         },],
-
-        pagos: [{
-            id: 1,
-            creditoId: 1,
-            fecha: '2024-01-15',
-            monto: 550,
-            descripcion: 'Primer pago'
-        }],
         categoriasTransaccion: {
             ingreso: [
                 {label: 'Salario', value: 'Salario'},
@@ -58,15 +51,15 @@ export const useFinanceStore = defineStore('finance', {
     getters: {
         balanceGeneral: (state) => {
             const totalCuentas = state.cuentas.reduce((sum, cuenta) => sum + (Number(cuenta.saldo) || 0), 0);
-            const totalInversiones = state.inversiones.reduce((sum, inv) => sum + (Number(inv.montoInvertido) || 0), 0);
+            const totalInversiones = state.inversiones.reduce((sum, inv) => sum + (Number(inv.monto) || 0), 0);
             return totalCuentas + totalInversiones;
         },
-        totalInvertido: (state) => state.inversiones.reduce((sum, inv) => sum + inv.montoInvertido, 0),
+        totalInvertido: (state) => state.inversiones.reduce((sum, inv) => sum + (inv.monto ||0), 0),
         totalGanancias: (state) => state.inversiones.reduce((sum, inv) => sum + (inv.ganancia || 0), 0),
         totalInvertidoActivo: (state) => {
             return state.inversiones
                 .filter(inv => inv.estado === 'activa')
-                .reduce((sum, inv) => sum + inv.montoInvertido, 0);
+                .reduce((sum, inv) => sum + (inv.monto || 0), 0);
         },
         pagosPorCreditoId: (state) => (creditoId) => {
             return state.pagos.filter(p => p.creditoId === creditoId);
@@ -335,22 +328,54 @@ export const useFinanceStore = defineStore('finance', {
                 return false;
             }
         },
-
-        // --- ACCIONES DE PAGOS ---
-        addPago(pagoData) {
-            const credito = this.inversiones.find(i => i.id === pagoData.creditoId);
-            if (!credito) return;
-            const cuenta = this.cuentas.find(c => c.id === credito.cuentaId);
-            if (cuenta) {
-                cuenta.saldo += pagoData.monto;
-            }
-            this.pagos.push({id: Date.now(), ...pagoData});
-            const totalPagado = this.pagosPorCreditoId(pagoData.creditoId).reduce((sum, p) => sum + p.monto, 0);
-            if (totalPagado >= credito.montoTotal) {
-                credito.estado = 'pagada';
+// --- ACCIONES DE PAGOS ---
+        async fetchPagosPorInversion(investmentId) {
+            try {
+                const { data: paymentsFromApi } = await investmentsService.getInvestmentPayments(investmentId);
+                // Mapea la respuesta del API al formato que usa el frontend
+                this.pagos = paymentsFromApi.map(pago => ({
+                    id: pago.payment_id,
+                    creditoId: pago.investment_id,
+                    fecha: pago.fecha_pago,
+                    monto: parseFloat(pago.monto_pago),
+                    descripcion: pago.descripcion
+                }));
+            } catch (error) {
+                console.error('Error al obtener los pagos de la inversión:', error);
+                this.pagos = []; // Limpia los pagos en caso de error
             }
         },
+        async addPago(pagoData) {
+            try {
+                // Mapea los datos del frontend al formato esperado por el backend
+                const paymentPayload = {
+                    investment_id: pagoData.creditoId,
+                    monto_pago: pagoData.monto,
+                    fecha_pago: pagoData.fecha,
+                    descripcion: pagoData.descripcion
+                };
 
+                const {data: nuevoPagoRegistrado} = await investmentsService.createInvestmentPayment(paymentPayload);
+
+                // El backend debería devolver el objeto del pago creado con su ID.
+                // Lo mapeamos de nuevo al formato que usa el frontend si es necesario.
+                const pagoFormateado = {
+                    id: nuevoPagoRegistrado.id, // Asumiendo que el backend devuelve un 'id'
+                    creditoId: nuevoPagoRegistrado.investment_id,
+                    fecha: nuevoPagoRegistrado.fecha_pago,
+                    monto: parseFloat(nuevoPagoRegistrado.monto_pago),
+                    descripcion: nuevoPagoRegistrado.descripcion
+                };
+
+                // Agrega el nuevo pago al estado local para actualizar la UI al instante.
+                this.pagos.push(pagoFormateado);
+
+            } catch (error) {
+                console.error('Error al registrar el pago:', error);
+                // Aquí podrías manejar el error, por ejemplo, mostrando una notificación global.
+                throw error; // Lanza el error para que el componente pueda manejarlo si es necesario.
+            }
+        },
         deletePago(pagoId) {
             const index = this.pagos.findIndex(p => p.id === pagoId);
             if (index === -1) return;

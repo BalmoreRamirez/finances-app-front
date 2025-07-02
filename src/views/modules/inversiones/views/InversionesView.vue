@@ -46,12 +46,14 @@ const inversionesFiltradas = computed(() => {
 });
 
 const totalInvertido = computed(() => {
-  return inversiones.value.reduce((sum, inv) => sum + (inv.montoInvertido || 0), 0);
+  return inversiones.value.reduce((sum, inv) => sum + (inv.monto || 0), 0);
 });
 
 // Métodos
 const formatCurrency = (value) => {
-  if (typeof value !== 'number') return '$0.00';
+  if (typeof value !== 'number' || isNaN(value)) {
+    return new Intl.NumberFormat('es-MX', {style: 'currency', currency: 'MXN'}).format(0);
+  }
   return new Intl.NumberFormat('es-MX', {style: 'currency', currency: 'MXN'}).format(value);
 };
 
@@ -63,7 +65,7 @@ const openCreateModal = () => {
     tipo: 'credito',
     descripcion: '',
     beneficiario: '',
-    montoInvertido: null,
+    monto: 0,
     interes: 0,
     montoTotal: 0,
     ganancia: 0,
@@ -81,6 +83,17 @@ const openEditModal = (inversion) => {
 };
 
 const handleSaveInversion = async (inversionData) => {
+
+  if (inversionData.tipo === 'credito' && inversionData.monto && inversionData.interes) {
+    const monto = parseFloat(inversionData.monto);
+    const interes = parseFloat(inversionData.interes) / 100;
+    // Calcula el monto total a recibir (capital + interés)
+    inversionData.montoTotal = monto * (1 + interes);
+  } else {
+    // Para otros tipos de inversión o si no hay interés, el total es el monto.
+    inversionData.montoTotal = inversionData.monto;
+  }
+
   let success = false;
   const action = isEditMode.value ? 'actualizada' : 'creada';
 
@@ -213,7 +226,7 @@ const getEstadoTag = (estado) => {
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm capitalize text-gray-500">{{ inversion.tipo }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-800">
-              {{ formatCurrency(inversion.montoInvertido) }}
+              {{ formatCurrency(inversion.monto) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-center">
               <Tag :severity="getEstadoTag(inversion.estado).severity" :value="getEstadoTag(inversion.estado).text"

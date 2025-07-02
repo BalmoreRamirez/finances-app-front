@@ -15,6 +15,9 @@ import Calendar from 'primevue/calendar';
 import InputText from 'primevue/inputtext';
 import ConfirmDialog from 'primevue/confirmdialog';
 import Toast from 'primevue/toast';
+// --- Importaciones para Vuelidate ---
+import {useVuelidate} from '@vuelidate/core';
+import {required, minValue, maxValue, maxLength, helpers} from '@vuelidate/validators';
 
 // --- Inicialización ---
 const route = useRoute();
@@ -24,8 +27,8 @@ const confirm = useConfirm();
 const toast = useToast();
 
 // --- State del Store ---
-const {inversionActual: credito, pagos: todosLosPagos} = storeToRefs(store);
-const {fetchInvestmentById, addPago, deletePago} = store;
+const {inversionActual: credito, pagos} = storeToRefs(store);
+const {fetchInvestmentById, fetchPagosPorInversion, addPago, deletePago} = store;
 
 // --- State Local ---
 const isLoading = ref(true);
@@ -36,23 +39,8 @@ const nuevoPago = ref({
   descripcion: 'Pago de cuota'
 });
 
-// --- Ciclo de Vida ---
-onMounted(async () => {
-  const investmentId = route.params.id;
-  if (investmentId) {
-    await fetchInvestmentById(investmentId);
-  }
-  isLoading.value = false;
-});
-onUnmounted(() => {
-  store.inversionActual = null;
-})
 // --- Propiedades Computadas ---
-const pagosDelCredito = computed(() => {
-  if (!credito.value) return [];
-  // Filtra los pagos que corresponden al ID de este crédito
-  return todosLosPagos.value.filter(p => p.creditoId === credito.value.id);
-});
+const pagosDelCredito = computed(() => pagos.value);
 
 const totalPagado = computed(() => {
   return pagosDelCredito.value.reduce((sum, pago) => sum + pago.monto, 0);
@@ -60,7 +48,8 @@ const totalPagado = computed(() => {
 
 const saldoPendiente = computed(() => {
   if (!credito.value) return 0;
-  return credito.value.montoTotal - totalPagado.value;
+  const saldo = credito.value.montoTotal - totalPagado.value;
+  return Math.max(0, saldo); // Evita saldos negativos
 });
 
 const porcentajePagado = computed(() => {
@@ -75,10 +64,44 @@ const formatCurrency = (value) => {
   return new Intl.NumberFormat('es-MX', {style: 'currency', currency: 'MXN'}).format(value);
 };
 
+// --- Reglas de Validación con Vuelidate ---
+const rules = computed(() => ({
+  monto: {
+    required: helpers.withMessage('El monto es obligatorio.', required),
+    minValue: helpers.withMessage('El monto debe ser mayor a cero.', minValue(0.01)),
+    maxValue: helpers.withMessage(`El monto no puede exceder el saldo pendiente de ${formatCurrency(saldoPendiente.value)}.`, maxValue(saldoPendiente.value))
+  },
+  fecha: {
+    required: helpers.withMessage('La fecha es obligatoria.', required)
+  },
+  descripcion: {
+    maxLength: helpers.withMessage('La descripción no debe exceder los 200 caracteres.', maxLength(200))
+  }
+}));
+
+// --- Instancia de Vuelidate ---
+const v$ = useVuelidate(rules, nuevoPago);
+
+// --- Ciclo de Vida ---
+onMounted(async () => {
+  const investmentId = route.params.id;
+  if (investmentId) {
+    await Promise.all([
+      fetchInvestmentById(investmentId),
+      fetchPagosPorInversion(investmentId)
+    ]);
+  }
+  isLoading.value = false;
+});
+
+onUnmounted(() => {
+  store.inversionActual = null;
+  store.pagos = [];
+});
+
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
   const options = {year: 'numeric', month: 'long', day: 'numeric'};
-  // Asegurarse de que la fecha se interpreta correctamente (UTC)
   const date = new Date(dateString + 'T00:00:00');
   return date.toLocaleDateString('es-MX', options);
 };
@@ -97,30 +120,40 @@ const getEstadoTag = (estado) => {
 };
 
 const abrirDialogPago = () => {
-  const montoMaximo = saldoPendiente.value > 0 ? saldoPendiente.value : 0;
+  const montoMaximo = saldoPendiente.value;
   nuevoPago.value = {
     fecha: new Date(),
     monto: montoMaximo,
     descripcion: 'Pago de cuota'
   };
+  v$.value.$reset(); // Resetea el estado de validación
   dialogPago.value = true;
 };
 
-const guardarPago = () => {
-  if (!nuevoPago.value.monto || nuevoPago.value.monto <= 0) {
-    toast.add({severity: 'warn', summary: 'Inválido', detail: 'Por favor ingresa un monto válido', life: 3000});
+const guardarPago = async () => {
+  const isValid = await v$.value.$validate();
+  if (!isValid) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Datos Inválidos',
+      detail: 'Por favor, revisa los errores en el formulario.',
+      life: 3000
+    });
     return;
   }
 
-  addPago({
-    creditoId: credito.value.id,
-    fecha: nuevoPago.value.fecha.toISOString().slice(0, 10),
-    monto: nuevoPago.value.monto,
-    descripcion: nuevoPago.value.descripcion
-  });
-
-  toast.add({severity: 'success', summary: 'Éxito', detail: 'Pago registrado correctamente', life: 3000});
-  dialogPago.value = false;
+  try {
+    await addPago({
+      creditoId: credito.value.id,
+      fecha: nuevoPago.value.fecha.toISOString().slice(0, 10),
+      monto: nuevoPago.value.monto,
+      descripcion: nuevoPago.value.descripcion
+    });
+    toast.add({severity: 'success', summary: 'Éxito', detail: 'Pago registrado correctamente', life: 3000});
+    dialogPago.value = false;
+  } catch (error) {
+    toast.add({severity: 'error', summary: 'Error', detail: 'No se pudo registrar el pago', life: 3000});
+  }
 };
 
 const handleDeletePago = (pagoId) => {
@@ -129,8 +162,9 @@ const handleDeletePago = (pagoId) => {
     header: 'Confirmar eliminación',
     icon: 'pi pi-exclamation-triangle',
     acceptClass: 'p-button-danger',
-    accept: () => {
-      deletePago(pagoId);
+    accept: async () => {
+      // Asumiendo que deletePago existe y refresca la lista o el store lo maneja
+      await deletePago(pagoId);
       toast.add({severity: 'info', summary: 'Eliminado', detail: 'El pago ha sido eliminado', life: 3000});
     }
   });
@@ -205,7 +239,8 @@ const goBack = () => {
       <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-bold text-gray-700">Estado de Cuenta</h2>
-          <Button v-if="credito.estado !== 'pagada'" label="Registrar Pago" icon="pi pi-plus" @click="abrirDialogPago"/>
+          <Button v-if="credito.estado !== 'pagada' && saldoPendiente > 0" label="Registrar Pago" icon="pi pi-plus"
+                  @click="abrirDialogPago"/>
         </div>
 
         <!-- Resumen de Pagos -->
@@ -261,17 +296,23 @@ const goBack = () => {
         <div class="space-y-4">
           <div>
             <label for="pago-monto" class="block mb-2 text-sm font-medium text-gray-700">Monto del Pago</label>
-            <InputNumber id="pago-monto" v-model="nuevoPago.monto" mode="currency" currency="MXN" locale="es-MX"
+            <InputNumber id="pago-monto" v-model="v$.monto.$model" mode="currency" currency="MXN" locale="es-MX"
+                         :class="{'p-invalid': v$.monto.$invalid && v$.monto.$dirty}"
                          :max="saldoPendiente" :min="0.01" autofocus/>
+            <small v-if="v$.monto.$error" class="p-error">{{ v$.monto.$errors[0].$message }}</small>
           </div>
           <div>
             <label for="pago-fecha" class="block mb-2 text-sm font-medium text-gray-700">Fecha del Pago</label>
-            <Calendar id="pago-fecha" v-model="nuevoPago.fecha" dateFormat="dd/mm/yy" showIcon/>
+            <Calendar id="pago-fecha" v-model="v$.fecha.$model" dateFormat="dd/mm/yy" showIcon
+                      :class="{'p-invalid': v$.fecha.$invalid && v$.fecha.$dirty}"/>
+            <small v-if="v$.fecha.$error" class="p-error">{{ v$.fecha.$errors[0].$message }}</small>
           </div>
           <div>
             <label for="pago-descripcion" class="block mb-2 text-sm font-medium text-gray-700">Descripción
               (Opcional)</label>
-            <InputText id="pago-descripcion" v-model="nuevoPago.descripcion"/>
+            <InputText id="pago-descripcion" v-model="v$.descripcion.$model"
+                       :class="{'p-invalid': v$.descripcion.$invalid && v$.descripcion.$dirty}"/>
+            <small v-if="v$.descripcion.$error" class="p-error">{{ v$.descripcion.$errors[0].$message }}</small>
           </div>
         </div>
         <template #footer>

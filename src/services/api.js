@@ -12,7 +12,7 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(config => {
     const token = localStorage.getItem('token');
     if (token) {
-        // Configura la cabecera de autorización como se espere en tu backend (ej. Bearer)
+        // Configura la cabecera de autorización como se espere en tu backend (ej. Bearer
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;

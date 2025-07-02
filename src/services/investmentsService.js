@@ -18,6 +18,19 @@ const investmentsService = {
     },
     getInvestmentById: (id) => {
         return api.get(`/investments/${id}`);
+    },
+    // --- Nuevo método para crear pagos ---
+    createInvestmentPayment: (paymentData) => {
+        return api.post('/investment-payments', paymentData);
+    },
+    getInvestmentPayments: (investmentId) => {
+        return api.get(`/investment-payments/investment/${investmentId}`);
+    },
+    updateInvestmentPayment: (id, paymentData) => {
+        return api.put(`/investment-payments/${id}`, paymentData);
+    },
+    deleteInvestmentPayment: (id) => {
+        return api.delete(`/investment-payments/${id}`);
     }
 };
 
