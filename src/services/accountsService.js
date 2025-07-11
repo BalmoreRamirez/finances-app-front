@@ -14,6 +14,6 @@ export default {
         return apiClient.delete(`/accounts/${accountId}`);
     },
     getAccountTypes() {
-        return apiClient.get('/accounts/types');
+        return apiClient.get('/account-types');
     },
 };

@@ -61,7 +61,7 @@
       <script setup>
       import { ref } from 'vue';
       import { useRouter } from 'vue-router';
-      import authService from "../../../services/authService.js";
+      import authService from "../../../services/auth.js";
 
 
       const router = useRouter();
@@ -73,7 +73,8 @@
         error.value = '';
         try {
           const response = await authService.login(email.value, password.value);
-          localStorage.setItem('token', response.data.token);
+          localStorage.setItem('accessToken', response.data.accessToken);
+          console.log('Inicio de sesión exitoso:', response.data);
           router.push('/dashboard');
         } catch (err) {
           if (err.response) {

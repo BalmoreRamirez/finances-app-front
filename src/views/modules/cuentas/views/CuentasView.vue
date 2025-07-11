@@ -31,7 +31,7 @@
   });
 
   const cuentasDeBalance = computed(() => {
-    return cuentas.value.filter(cuenta => cuenta.tipo === 'activo' || cuenta.tipo === 'pasivo');
+    return cuentas.value.filter(cuenta => cuenta.tipo === 'activo' || cuenta.tipo === 'pasivo' || cuenta.tipo === 'credito');
   });
 
   const tiposCuentaDeBalance = computed(() => {

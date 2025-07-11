@@ -77,12 +77,10 @@ export const useFinanceStore = defineStore('finance', {
                 const response = await accountsService.getAccounts();
                 // Mapea la respuesta de la API a la estructura que usa el frontend
                 this.cuentas = response.data.map(cuenta => ({
-                    id: cuenta.accountId,
-                    nombre: cuenta.accountName,
+                    id: cuenta.id,
+                    nombre: cuenta.account_name,
                     saldo: parseFloat(cuenta.balance),
-                    tipo: cuenta.AccountType.type_name,
-                    // Puedes añadir más campos si los necesitas
-                    currencySymbol: cuenta.Currency.currency_symbol
+                    tipo: cuenta.account_type.name,
                 }));
             } catch (error) {
                 console.error('Error al obtener las cuentas:', error);
@@ -94,8 +92,8 @@ export const useFinanceStore = defineStore('finance', {
                 const response = await accountsService.getAccountTypes();
                 // Mapea la respuesta al formato { label, value }
                 this.tiposCuenta = response.data.map(type => ({
-                    label: type.type_name.charAt(0).toUpperCase() + type.type_name.slice(1),
-                    value: type.account_type_id
+                    label: type.name.charAt(0).toUpperCase() + type.name.slice(1),
+                    value: type.id
                 }));
             } catch (error) {
                 console.error('Error al obtener los tipos de cuenta:', error);
@@ -210,10 +208,10 @@ export const useFinanceStore = defineStore('finance', {
             try {
                 const response = await investmentsService.getInvestments();
                 this.inversiones = response.data.map(inv => ({
-                    id: inv.investment_id,
+                    id: inv.id,
                     cuentaId: inv.account_id,
                     descripcion: inv.investment_name,
-                    tipo: inv.InvestmentType.type_name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+                    tipo: inv.investment_type?.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || 'desconocido',
                     beneficiario: inv.beneficiary,
                     monto: parseFloat(inv.invested_amount),
                     interes: parseFloat(inv.interest),
@@ -235,7 +233,7 @@ export const useFinanceStore = defineStore('finance', {
 
 
                 // Validar que la respuesta contiene los datos mínimos necesarios
-                if (!inv || !inv.investment_id) {
+                if (!inv || !inv.id) {
                     console.error('Respuesta de API inválida para la inversión:', id);
                     this.inversionActual = null;
                     return false;
@@ -255,11 +253,11 @@ export const useFinanceStore = defineStore('finance', {
                 }
 
                 this.inversionActual = {
-                    id: inv.investment_id,
+                    id: inv.id,
                     cuentaId: inv.account_id,
-                    nombreCuenta: inv.Account?.account_name || 'N/A', // Acceso seguro
+                    nombreCuenta: inv.account?.account_name || 'N/A', // Acceso seguro
                     descripcion: inv.investment_name,
-                    tipo: inv.InvestmentType?.type_name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || 'desconocido',
+                    tipo: inv.investment_type?.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || 'desconocido',
                     beneficiario: inv.beneficiary,
                     montoInvertido: montoInvertido,
                     interes: interes,
@@ -332,9 +330,10 @@ export const useFinanceStore = defineStore('finance', {
         async fetchPagosPorInversion(investmentId) {
             try {
                 const { data: paymentsFromApi } = await investmentsService.getInvestmentPayments(investmentId);
+                const payments = Array.isArray(paymentsFromApi) ? paymentsFromApi : [];
                 // Mapea la respuesta del API al formato que usa el frontend
-                this.pagos = paymentsFromApi.map(pago => ({
-                    id: pago.payment_id,
+                this.pagos = payments.map(pago => ({
+                    id: pago.id,
                     creditoId: pago.investment_id,
                     fecha: pago.fecha_pago,
                     monto: parseFloat(pago.monto_pago),
