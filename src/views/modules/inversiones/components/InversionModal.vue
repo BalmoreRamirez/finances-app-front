@@ -1,5 +1,5 @@
 <script setup>
-import {ref, watch, computed, onMounted} from 'vue';
+import {ref, watch, computed} from 'vue';
 import {storeToRefs} from 'pinia';
 import {useFinanceStore} from '../../../../stores/financeStore.js';
 
@@ -15,41 +15,42 @@ import Button from 'primevue/button';
 const props = defineProps({
   visible: Boolean,
   isEditMode: Boolean,
-  inversionData: Object
+  inversionData: Object,
+  tiposInversion: Array // Nuevo: recibir tipos como prop
 });
 const emit = defineEmits(['update:visible', 'save']);
 
 // Store
 const store = useFinanceStore();
 const {cuentas} = storeToRefs(store);
-const {fetchAccounts} = store;
 
 // State local
 const localInversion = ref({});
 const submitted = ref(false);
-const tiposInversion = ref([
-  {label: 'Crédito', value: 'credito'},
-  {label: 'Compra-Venta', value: 'compraventa'}
-]);
 
-// Cargar cuentas
-onMounted(() => {
-  if (cuentas.value.length === 0) {
-    fetchAccounts();
+// Función helper para determinar el tipo basado en investment_type_id o tipo
+const getTipoFromData = (data) => {
+  if (data.tipo) return data.tipo;
+  if (data.investment_type_id) {
+    const tipoFound = props.tiposInversion.find(type => type.id === data.investment_type_id);
+    return tipoFound ? tipoFound.value : null;
   }
-});
+  return null;
+};
 
 // Watcher para sincronizar props con el state local
 watch(() => props.inversionData, (newData) => {
   if (newData) {
-    // Inicializa el estado local con los datos de la inversión
+    const tipoDetectado = getTipoFromData(newData);
+
     localInversion.value = {
       ...newData,
-      // Asegura valores iniciales para los campos de compra-venta
+      tipo: tipoDetectado,
       cantidad: newData.cantidad || 1,
-      costoUnitario: newData.costoUnitario || (newData.tipo !== 'credito' ? newData.monto : 0) || 0,
+      costoUnitario: newData.costoUnitario || (tipoDetectado !== 'credito' ? newData.monto : 0) || 0,
       gananciaUnitaria: newData.gananciaUnitaria || 0,
     };
+
     // Manejo de fechas para edición
     if (typeof newData.fechaInversion === 'string') {
       localInversion.value.fechaInversion = new Date(newData.fechaInversion + 'T00:00:00');
@@ -60,20 +61,28 @@ watch(() => props.inversionData, (newData) => {
   }
 }, {deep: true, immediate: true});
 
+// También watcher que se ejecute cuando tiposInversion se carga
+watch([() => props.inversionData, () => props.tiposInversion], ([newData]) => {
+  if (newData && props.tiposInversion.length > 0) {
+    const tipoDetectado = getTipoFromData(newData);
+    if (tipoDetectado && tipoDetectado !== localInversion.value.tipo) {
+      localInversion.value.tipo = tipoDetectado;
+    }
+  }
+}, {deep: true});
 
 // --- LÓGICA DE CÁLCULO CENTRALIZADA ---
 
 // Calcula el monto total invertido basado en el tipo
 const montoCalculado = computed(() => {
   const inv = localInversion.value;
-  if (inv.tipo === 'compraventa') {
+  if (inv.tipo === 'compra') { // Cambio: usar 'compra' en lugar de 'compraventa'
     return (inv.cantidad || 0) * (inv.costoUnitario || 0);
   }
-  // Para 'credito', el monto se ingresa directamente
   return inv.monto || 0;
 });
 
-// Calcula la ganancia estimada basada en el tipo
+// Calcula la ganancia estimada basado en el tipo
 const gananciaCalculada = computed(() => {
   const inv = localInversion.value;
   if (inv.tipo === 'credito') {
@@ -81,7 +90,7 @@ const gananciaCalculada = computed(() => {
     const interes = inv.interes || 0;
     return monto * (interes / 100);
   }
-  if (inv.tipo === 'compraventa') {
+  if (inv.tipo === 'compra') { // Cambio: usar 'compra' en lugar de 'compraventa'
     return (inv.cantidad || 0) * (inv.gananciaUnitaria || 0);
   }
   return 0;
@@ -94,8 +103,7 @@ const montoTotalCalculado = computed(() => {
 
 // Watcher para actualizar el objeto principal con los valores calculados
 watch([montoCalculado, gananciaCalculada, montoTotalCalculado], ([newMonto, newGanancia, newMontoTotal]) => {
-  // Solo actualiza el monto para compra-venta, para crédito es entrada manual
-  if (localInversion.value.tipo === 'compraventa') {
+  if (localInversion.value.tipo === 'compra') { // Cambio: usar 'compra' en lugar de 'compraventa'
     localInversion.value.monto = newMonto;
   }
   localInversion.value.ganancia = newGanancia;
@@ -128,6 +136,9 @@ const saveInversion = () => {
   if (inv.fechaVencimiento instanceof Date) {
     inv.fechaVencimiento = inv.fechaVencimiento.toISOString().split('T')[0];
   }
+
+  console.log('Datos enviados al store:', inv);
+
   emit('save', inv);
   closeModal();
 };
@@ -138,11 +149,12 @@ const saveInversion = () => {
           :header="props.isEditMode ? 'Editar Inversión' : 'Registrar Inversión'" modal class="p-fluid"
           @update:visible="closeModal">
     <div class="space-y-6 p-4">
+
       <!-- Campos Comunes -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label for="tipo" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Inversión</label>
-          <Dropdown id="tipo" v-model="localInversion.tipo" :options="tiposInversion"
+          <Dropdown id="tipo" v-model="localInversion.tipo" :options="props.tiposInversion"
                     optionLabel="label" optionValue="value" placeholder="Selecciona un tipo"
                     :class="{'p-invalid': submitted && !localInversion.tipo}"/>
         </div>
@@ -164,8 +176,8 @@ const saveInversion = () => {
         <InputText id="beneficiario" v-model.trim="localInversion.beneficiario"/>
       </div>
 
-      <!-- Campos Condicionales para Compra-Venta -->
-      <div v-if="localInversion.tipo === 'compraventa'" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- Campos Condicionales para Compra -->
+      <div v-if="localInversion.tipo === 'compra'" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label for="cantidad" class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
           <InputNumber id="cantidad" v-model="localInversion.cantidad" :min="1"/>

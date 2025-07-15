@@ -11,7 +11,7 @@ const investmentsService = {
         return api.post('/investments', investmentData);
     },
     updateInvestment: (id, investmentData) => {
-        return api.put(`/investments/${id}`, investmentData);
+        return api.patch(`/investments/${id}`, investmentData);
     },
     deleteInvestment: (id) => {
         return api.delete(`/investments/${id}`);
@@ -19,9 +19,9 @@ const investmentsService = {
     getInvestmentById: (id) => {
         return api.get(`/investments/${id}`);
     },
-    // --- Nuevo método para crear pagos ---
-    createInvestmentPayment: (paymentData) => {
-        return api.post('/investment-credit-payments', paymentData);
+    // --- Métodos para pagos de inversiones ---
+    createPayment: (investmentId, paymentData) => {
+        return api.post(`/investment-credit-payments/${investmentId}`, paymentData);
     },
     getInvestmentPayments: (investmentId) => {
         return api.get(`/investment-credit-payments/${investmentId}`);
@@ -31,6 +31,9 @@ const investmentsService = {
     },
     deleteInvestmentPayment: (id) => {
         return api.delete(`/investment-credit-payments/${id}`);
+    },
+    deletePayment: (investmentId, paymentId) => {
+        return api.delete(`/investment-credit-payments/${investmentId}/${paymentId}`);
     }
 };
 

@@ -2,7 +2,6 @@ import {defineStore} from 'pinia';
 import accountsService from "../services/accountsService.js";
 import investmentsService from "../services/investmentsService.js";
 
-
 export const useFinanceStore = defineStore('finance', {
     persist: true,
 
@@ -33,8 +32,9 @@ export const useFinanceStore = defineStore('finance', {
             ingreso: [
                 {label: 'Salario', value: 'Salario'},
                 {label: 'Ventas', value: 'Ventas'},
-                {label: 'Bonificación', value: 'Bonificación'},
-                {label: 'Otro', value: 'Otro'},
+                {label: 'Freelance', value: 'Freelance'},
+                {label: 'Inversiones', value: 'Inversiones'},
+                {label: 'Otros', value: 'Otros'}
             ],
             gasto: [
                 {label: 'Alimentación', value: 'Alimentación'},
@@ -42,8 +42,8 @@ export const useFinanceStore = defineStore('finance', {
                 {label: 'Vivienda', value: 'Vivienda'},
                 {label: 'Entretenimiento', value: 'Entretenimiento'},
                 {label: 'Salud', value: 'Salud'},
-                {label: 'Servicios', value: 'Servicios'},
-                {label: 'Otro', value: 'Otro'},
+                {label: 'Educación', value: 'Educación'},
+                {label: 'Otros', value: 'Otros'}
             ]
         },
     }),
@@ -54,7 +54,7 @@ export const useFinanceStore = defineStore('finance', {
             const totalInversiones = state.inversiones.reduce((sum, inv) => sum + (Number(inv.monto) || 0), 0);
             return totalCuentas + totalInversiones;
         },
-        totalInvertido: (state) => state.inversiones.reduce((sum, inv) => sum + (inv.monto ||0), 0),
+        totalInvertido: (state) => state.inversiones.reduce((sum, inv) => sum + (inv.monto || 0), 0),
         totalGanancias: (state) => state.inversiones.reduce((sum, inv) => sum + (inv.ganancia || 0), 0),
         totalInvertidoActivo: (state) => {
             return state.inversiones
@@ -75,30 +75,30 @@ export const useFinanceStore = defineStore('finance', {
         async fetchAccounts() {
             try {
                 const response = await accountsService.getAccounts();
-                // Mapea la respuesta de la API a la estructura que usa el frontend
                 this.cuentas = response.data.map(cuenta => ({
                     id: cuenta.id,
                     nombre: cuenta.account_name,
-                    saldo: parseFloat(cuenta.balance),
-                    tipo: cuenta.account_type.name,
+                    saldo: parseFloat(cuenta.balance) || 0,
+                    tipo: cuenta.account_type?.name || 'Desconocido',
+                    accountId: cuenta.id
                 }));
             } catch (error) {
                 console.error('Error al obtener las cuentas:', error);
-                // Opcional: manejar el error en la UI
             }
         },
+
         async fetchAccountTypes() {
             try {
                 const response = await accountsService.getAccountTypes();
-                // Mapea la respuesta al formato { label, value }
                 this.tiposCuenta = response.data.map(type => ({
-                    label: type.name.charAt(0).toUpperCase() + type.name.slice(1),
+                    label: type.name,
                     value: type.id
                 }));
             } catch (error) {
                 console.error('Error al obtener los tipos de cuenta:', error);
             }
         },
+
         async addCuenta(cuentaData) {
             try {
                 await accountsService.createAccount(cuentaData);
@@ -109,6 +109,7 @@ export const useFinanceStore = defineStore('finance', {
                 return false;
             }
         },
+
         async updateCuenta(cuentaActualizada) {
             try {
                 await accountsService.updateAccount(cuentaActualizada.accountId, cuentaActualizada);
@@ -119,8 +120,11 @@ export const useFinanceStore = defineStore('finance', {
                 return false;
             }
         },
+
         async deleteCuenta(cuentaId) {
-            const isUsed = this.ingresos.some(t => t.cuentaId === cuentaId) || this.gastos.some(t => t.cuentaId === cuentaId) || this.inversiones.some(i => i.cuentaId === cuentaId);
+            const isUsed = this.ingresos.some(t => t.cuentaId === cuentaId) ||
+                this.gastos.some(t => t.cuentaId === cuentaId) ||
+                this.inversiones.some(i => i.cuentaId === cuentaId);
             if (isUsed) {
                 alert('No se puede eliminar la cuenta porque tiene transacciones o inversiones asociadas.');
                 return;
@@ -196,52 +200,56 @@ export const useFinanceStore = defineStore('finance', {
             try {
                 const response = await investmentsService.getInvestmentTypes();
                 this.tiposInversion = response.data.map(type => ({
-                    label: type.type_name,
-                    value: type.investment_type_id
+                    id: type.id,
+                    name: type.name,
+                    description: type.description,
+                    label: type.name.charAt(0).toUpperCase() + type.name.slice(1),
+                    value: type.name.toLowerCase()
                 }));
             } catch (error) {
                 console.error('Error al obtener los tipos de inversión:', error);
-                this.tiposInversion = []; // Resetea en caso de error
+                this.tiposInversion = [];
             }
         },
+
         async fetchInvestments() {
             try {
                 const response = await investmentsService.getInvestments();
                 this.inversiones = response.data.map(inv => ({
                     id: inv.id,
                     cuentaId: inv.account_id,
+                    nombreCuenta: inv.account?.account_name || 'N/A',
+                    tipo: inv.investment_type?.name || 'Desconocido',
                     descripcion: inv.investment_name,
-                    tipo: inv.investment_type?.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || 'desconocido',
+                    descripcionDetallada: inv.description,
                     beneficiario: inv.beneficiary,
-                    monto: parseFloat(inv.invested_amount),
-                    interes: parseFloat(inv.interest),
-                    montoTotal: parseFloat(inv.total_amount) || 0,
+                    monto: parseFloat(inv.invested_amount) || 0,
+                    interes: parseFloat(inv.interest) || 0,
                     ganancia: parseFloat(inv.profit) || 0,
+                    montoTotal: parseFloat(inv.total_amount) || 0,
                     fechaInversion: inv.investment_date,
                     fechaVencimiento: inv.due_date,
-                    estado: inv.status,
+                    estado: inv.status || 'activo'
                 }));
             } catch (error) {
                 console.error('Error al obtener las inversiones:', error);
             }
         },
+
         async fetchInvestmentById(id) {
             this.inversionActual = null;
             try {
                 const response = await investmentsService.getInvestmentById(id);
                 const inv = response.data;
 
-
-                // Validar que la respuesta contiene los datos mínimos necesarios
                 if (!inv || !inv.id) {
-                    console.error('Respuesta de API inválida para la inversión:', id);
-                    this.inversionActual = null;
+                    console.error('Respuesta inválida del servidor:', inv);
                     return false;
                 }
+
                 const montoInvertido = parseFloat(inv.invested_amount);
                 const interes = parseFloat(inv.interest);
 
-                // Cálculo seguro de montoTotal y ganancia, evitando NaN
                 let montoTotal = parseFloat(inv.total_amount);
                 if (isNaN(montoTotal)) {
                     montoTotal = montoInvertido + (montoInvertido * (interes / 100));
@@ -254,36 +262,47 @@ export const useFinanceStore = defineStore('finance', {
 
                 this.inversionActual = {
                     id: inv.id,
+                    investment_name: inv.investment_name,
+                    beneficiary: inv.beneficiary,
+                    invested_amount: inv.invested_amount,
+                    interest: inv.interest,
+                    total_amount: inv.total_amount,
+                    profit: inv.profit,
+                    investment_date: inv.investment_date,
+                    due_date: inv.due_date,
+                    status: inv.status,
+                    description: inv.description,
+                    account: inv.account,
+                    investment_type: inv.investment_type,
                     cuentaId: inv.account_id,
-                    nombreCuenta: inv.account?.account_name || 'N/A', // Acceso seguro
+                    tipo: inv.investment_type?.name || 'Desconocido',
                     descripcion: inv.investment_name,
-                    tipo: inv.investment_type?.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || 'desconocido',
+                    descripcionDetallada: inv.description,
                     beneficiario: inv.beneficiary,
-                    montoInvertido: montoInvertido,
+                    monto: montoInvertido,
                     interes: interes,
-                    montoTotal: montoTotal,
                     ganancia: ganancia,
+                    montoTotal: montoTotal,
                     fechaInversion: inv.investment_date,
                     fechaVencimiento: inv.due_date,
-                    estado: inv.status,
-                    descripcionDetallada: inv.description,
+                    estado: inv.status || 'activo',
+                    nombreCuenta: inv.account?.account_name || 'N/A'
                 };
                 return true;
             } catch (error) {
                 console.error(`Error al obtener o procesar la inversión ${id}:`, error);
-                this.inversionActual = null; // Asegura que el estado quede limpio en caso de error
+                this.inversionActual = null;
                 return false;
             }
         },
+
         async addInversion(inversionData) {
-            // ... tu lógica existente, pero ahora usando el servicio
             try {
                 await investmentsService.createInvestment(inversionData);
-                await this.fetchInvestments(); // Recarga las inversiones
-                // Lógica para ajustar saldos de cuentas
+                await this.fetchInvestments();
                 const cuenta = this.cuentas.find(c => c.id === inversionData.cuentaId);
                 if (cuenta) {
-                    cuenta.saldo -= inversionData.montoInvertido;
+                    cuenta.saldo -= inversionData.monto;
                 }
                 return true;
             } catch (error) {
@@ -291,13 +310,26 @@ export const useFinanceStore = defineStore('finance', {
                 return false;
             }
         },
-        async updateInversion(inversionData) {
-            // ... tu lógica existente, pero ahora usando el servicio
+
+        async updateInversion(inversionId, inversionData) {
+            const payload = {
+                account_id: inversionData.cuentaId,
+                investment_name: inversionData.descripcion,
+                investment_type_id: inversionData.tipoId,
+                description: inversionData.descripcionDetallada,
+                beneficiary: inversionData.beneficiario,
+                invested_amount: inversionData.tipo === 'credito' ? inversionData.monto : inversionData.montoInvertido,
+                interest: isNaN(inversionData.interes) ? null : inversionData.interes,
+                total_amount: inversionData.montoTotal,
+                profit: inversionData.ganancia,
+                investment_date: inversionData.fechaInversion,
+                due_date: inversionData.fechaVencimiento,
+                status: inversionData.estado
+            };
+
             try {
-                await investmentsService.updateInvestment(inversionData.id, inversionData);
-                await this.fetchInvestments(); // Recarga para obtener datos actualizados
-                // La lógica de saldos puede ser compleja, idealmente el backend la manejaría
-                // o se necesitaría una recarga completa de las cuentas.
+                await investmentsService.updateInvestment(inversionId, payload);
+                await this.fetchInvestments();
                 await this.fetchAccounts();
                 return true;
             } catch (error) {
@@ -305,18 +337,16 @@ export const useFinanceStore = defineStore('finance', {
                 return false;
             }
         },
+
         async deleteInversion(inversionId) {
-            // ... tu lógica existente, pero ahora usando el servicio
             try {
                 await investmentsService.deleteInvestment(inversionId);
-                // Lógica para restaurar saldo y eliminar localmente
                 const index = this.inversiones.findIndex(inv => inv.id === inversionId);
                 if (index !== -1) {
                     const inversion = this.inversiones[index];
                     const cuenta = this.cuentas.find(c => c.id === inversion.cuentaId);
-                    if (cuenta && inversion.estado !== 'finalizada' && inversion.estado !== 'pagada') {
-                        // Solo devuelve el dinero si la inversión no se completó
-                        cuenta.saldo += inversion.montoInvertido;
+                    if (cuenta) {
+                        cuenta.saldo += inversion.monto;
                     }
                     this.inversiones.splice(index, 1);
                 }
@@ -326,69 +356,59 @@ export const useFinanceStore = defineStore('finance', {
                 return false;
             }
         },
-// --- ACCIONES DE PAGOS ---
+
+        // --- ACCIONES DE PAGOS ---
         async fetchPagosPorInversion(investmentId) {
             try {
-                const { data: paymentsFromApi } = await investmentsService.getInvestmentPayments(investmentId);
+                const {data: paymentsFromApi} = await investmentsService.getInvestmentPayments(investmentId);
                 const payments = Array.isArray(paymentsFromApi) ? paymentsFromApi : [];
-                // Mapea la respuesta del API al formato que usa el frontend
                 this.pagos = payments.map(pago => ({
                     id: pago.id,
                     creditoId: pago.investment_id,
-                    fecha: pago.fecha_pago,
-                    monto: parseFloat(pago.monto_pago),
-                    descripcion: pago.descripcion
+                    fecha: pago.payment_date || pago.fecha_pago,
+                    monto: parseFloat(pago.amount || pago.monto_pago || 0),
+                    descripcion: pago.description || pago.descripcion || ''
                 }));
             } catch (error) {
                 console.error('Error al obtener los pagos de la inversión:', error);
-                this.pagos = []; // Limpia los pagos en caso de error
+                this.pagos = [];
             }
         },
-        async addPago(pagoData) {
+
+        async addPago(paymentData) {
             try {
-                // Mapea los datos del frontend al formato esperado por el backend
-                const paymentPayload = {
-                    investment_id: pagoData.creditoId,
-                    monto_pago: pagoData.monto,
-                    fecha_pago: pagoData.fecha,
-                    descripcion: pagoData.descripcion
+                const { creditoId, ...pagoInfo } = paymentData;
+                const pagoPayload = {
+                    monto_pago: pagoInfo.amount,
+                    fecha_pago: pagoInfo.payment_date,
+                    descripcion: pagoInfo.description
                 };
-
-                const {data: nuevoPagoRegistrado} = await investmentsService.createInvestmentPayment(paymentPayload);
-
-                // El backend debería devolver el objeto del pago creado con su ID.
-                // Lo mapeamos de nuevo al formato que usa el frontend si es necesario.
+                const response = await investmentsService.createPayment(creditoId, pagoPayload);
+                const data = response.data;
                 const pagoFormateado = {
-                    id: nuevoPagoRegistrado.id, // Asumiendo que el backend devuelve un 'id'
-                    creditoId: nuevoPagoRegistrado.investment_id,
-                    fecha: nuevoPagoRegistrado.fecha_pago,
-                    monto: parseFloat(nuevoPagoRegistrado.monto_pago),
-                    descripcion: nuevoPagoRegistrado.descripcion
+                    id: data.id,
+                    creditoId: data.investment_id || creditoId,
+                    fecha: data.payment_date || pagoPayload.fecha_pago,
+                    monto: parseFloat(data.amount || data.monto_pago),
+                    descripcion: data.description || data.descripcion
                 };
-
-                // Agrega el nuevo pago al estado local para actualizar la UI al instante.
                 this.pagos.push(pagoFormateado);
-
+                return true;
             } catch (error) {
-                console.error('Error al registrar el pago:', error);
-                // Aquí podrías manejar el error, por ejemplo, mostrando una notificación global.
-                throw error; // Lanza el error para que el componente pueda manejarlo si es necesario.
+                console.error('Error al crear pago:', error);
+                return false;
             }
         },
-        deletePago(pagoId) {
-            const index = this.pagos.findIndex(p => p.id === pagoId);
-            if (index === -1) return;
-            const pago = this.pagos[index];
-            const credito = this.inversiones.find(i => i.id === pago.creditoId);
-            if (!credito) return;
-            const cuenta = this.cuentas.find(c => c.id === credito.cuentaId);
-            if (cuenta) {
-                cuenta.saldo -= pago.monto;
+
+        async deletePago(investmentId, paymentId) {
+            try {
+                await investmentsService.deletePayment(investmentId, paymentId);
+                this.pagos = this.pagos.filter(pago => pago.id !== paymentId);
+                return true;
+            } catch (error) {
+                console.error('Error al eliminar pago:', error);
+                return false;
             }
-            if (credito.estado === 'pagada') {
-                credito.estado = 'activa';
-            }
-            this.pagos.splice(index, 1);
-        },
+        }
     },
 });
