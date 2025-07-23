@@ -2,6 +2,8 @@
 import {ref, watch, computed} from 'vue';
 import {storeToRefs} from 'pinia';
 import {useFinanceStore} from '../../../../stores/financeStore.js';
+import useVuelidate from '@vuelidate/core';
+import { required } from '@vuelidate/validators';
 
 // Componentes de PrimeVue
 import Dialog from 'primevue/dialog';
@@ -16,7 +18,8 @@ const props = defineProps({
   visible: Boolean,
   isEditMode: Boolean,
   inversionData: Object,
-  tiposInversion: Array // Nuevo: recibir tipos como prop
+  tiposInversion: Array,
+  cuentas: Array,
 });
 const emit = defineEmits(['update:visible', 'save']);
 
@@ -27,6 +30,14 @@ const {cuentas} = storeToRefs(store);
 // State local
 const localInversion = ref({});
 const submitted = ref(false);
+
+// Reglas de validación
+const rules = computed(() => ({
+  cuentaId: { required },
+  cuentaDestinoId: { required },
+  tipo: { required },
+}));
+const v$ = useVuelidate(rules, localInversion);
 
 // Función helper para determinar el tipo basado en investment_type_id o tipo
 const getTipoFromData = (data) => {
@@ -41,23 +52,24 @@ const getTipoFromData = (data) => {
 // Watcher para sincronizar props con el state local
 watch(() => props.inversionData, (newData) => {
   if (newData) {
-    const tipoDetectado = getTipoFromData(newData);
-
+    // Mapeo de nombres para compatibilidad entre el padre y el modal
     localInversion.value = {
-      ...newData,
-      tipo: tipoDetectado,
-      cantidad: newData.cantidad || 1,
-      costoUnitario: newData.costoUnitario || (tipoDetectado !== 'credito' ? newData.monto : 0) || 0,
-      gananciaUnitaria: newData.gananciaUnitaria || 0,
+      cuentaId: newData.account_origen_id ?? newData.cuentaId ?? null,
+      cuentaDestinoId: newData.account_destino_id ?? newData.cuentaDestinoId ?? null,
+      tipo: newData.investment_type_id ? (props.tiposInversion.find(t => t.id === newData.investment_type_id)?.value) : (newData.tipo ?? null),
+      descripcion: newData.investment_name ?? newData.descripcion ?? '',
+      beneficiario: newData.beneficiary ?? newData.beneficiario ?? '',
+      monto: newData.invested_amount ?? newData.monto ?? 0,
+      interes: newData.interest ?? newData.interes ?? null,
+      cantidad: newData.cantidad ?? 1,
+      costoUnitario: newData.costoUnitario ?? 0,
+      gananciaUnitaria: newData.gananciaUnitaria ?? 0,
+      ganancia: newData.profit ?? newData.ganancia ?? 0,
+      montoTotal: newData.total_amount ?? newData.montoTotal ?? 0,
+      fechaInversion: newData.investment_date ? new Date(newData.investment_date + 'T00:00:00') : (newData.fechaInversion ? new Date(newData.fechaInversion + 'T00:00:00') : null),
+      fechaVencimiento: newData.due_date ? new Date(newData.due_date + 'T00:00:00') : (newData.fechaVencimiento ? new Date(newData.fechaVencimiento + 'T00:00:00') : null),
+      status: newData.status ?? newData.estado ?? '',
     };
-
-    // Manejo de fechas para edición
-    if (typeof newData.fechaInversion === 'string') {
-      localInversion.value.fechaInversion = new Date(newData.fechaInversion + 'T00:00:00');
-    }
-    if (typeof newData.fechaVencimiento === 'string' && newData.fechaVencimiento) {
-      localInversion.value.fechaVencimiento = new Date(newData.fechaVencimiento + 'T00:00:00');
-    }
   }
 }, {deep: true, immediate: true});
 
@@ -122,25 +134,42 @@ const closeModal = () => {
   submitted.value = false;
 };
 
-const saveInversion = () => {
+const preparePayload = () => {
+  // Buscar el id del tipo de inversión seleccionado
+  let investmentTypeId = null;
+  if (localInversion.value.tipo && Array.isArray(props.tiposInversion)) {
+    const tipoObj = props.tiposInversion.find(t => t.value === localInversion.value.tipo);
+    if (tipoObj) investmentTypeId = tipoObj.id;
+  }
+  return {
+    account_origen_id: localInversion.value.cuentaId ? parseInt(localInversion.value.cuentaId) : null,
+    account_destino_id: localInversion.value.cuentaDestinoId ? parseInt(localInversion.value.cuentaDestinoId) : null,
+    investment_name: localInversion.value.descripcion?.trim() || '',
+    investment_type_id: investmentTypeId,
+    description: localInversion.value.descripcion?.trim() || '',
+    beneficiary: localInversion.value.beneficiario?.trim() || '',
+    invested_amount: localInversion.value.monto ? parseFloat(localInversion.value.monto) : null,
+    interest: localInversion.value.interes !== null && localInversion.value.interes !== undefined && localInversion.value.interes !== '' ? parseFloat(localInversion.value.interes) : null,
+    total_amount: localInversion.value.montoTotal ? parseFloat(localInversion.value.montoTotal) : null,
+    profit: localInversion.value.ganancia ? parseFloat(localInversion.value.ganancia) : null,
+    investment_date: localInversion.value.fechaInversion ? new Date(localInversion.value.fechaInversion).toISOString() : '',
+    due_date: localInversion.value.fechaVencimiento ? new Date(localInversion.value.fechaVencimiento).toISOString() : '',
+    status: localInversion.value.status?.trim() || ''
+  };
+};
+
+const saveInversion = async () => {
   submitted.value = true;
-  const inv = localInversion.value;
-  const isValid = inv.descripcion && inv.tipo && inv.cuentaId && inv.monto > 0;
+  v$.value.$touch();
 
-  if (!isValid) return;
-
-  // Formatear fechas a string YYYY-MM-DD antes de emitir
-  if (inv.fechaInversion instanceof Date) {
-    inv.fechaInversion = inv.fechaInversion.toISOString().split('T')[0];
-  }
-  if (inv.fechaVencimiento instanceof Date) {
-    inv.fechaVencimiento = inv.fechaVencimiento.toISOString().split('T')[0];
+  if (v$.value.$invalid) {
+    alert('Por favor completa todos los campos obligatorios.');
+    return;
   }
 
-  console.log('Datos enviados al store:', inv);
-
-  emit('save', inv);
-  closeModal();
+  const payload = preparePayload();
+  console.log('Payload preparado:', payload);
+  emit('save', payload);
 };
 </script>
 
@@ -163,6 +192,12 @@ const saveInversion = () => {
           <Dropdown id="cuentaId" v-model="localInversion.cuentaId" :options="cuentas" optionLabel="nombre"
                     optionValue="id" placeholder="Selecciona una cuenta"
                     :class="{'p-invalid': submitted && !localInversion.cuentaId}"/>
+        </div>
+        <div>
+          <label for="cuentaDestinoId" class="block text-sm font-medium text-gray-700 mb-1">Cuenta de Destino</label>
+          <Dropdown id="cuentaDestinoId" v-model="localInversion.cuentaDestinoId" :options="cuentas" optionLabel="nombre"
+                    optionValue="id" placeholder="Selecciona una cuenta"
+                    :class="{'p-invalid': submitted && !localInversion.cuentaDestinoId}"/>
         </div>
       </div>
       <div>
