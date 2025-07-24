@@ -27,4 +27,10 @@ app.use(PrimeVue, {
     unstyled: false,
     pt: Tailwind
 });
+
+const components = import.meta.glob('./components/**/*.vue', { eager: true })
+Object.entries(components).forEach(([path, definition]) => {
+    const componentName = path.split('/').pop().replace(/\.\w+$/, '')
+    app.component(componentName.replace('Component', ''), definition.default)
+})
 app.mount('#app');

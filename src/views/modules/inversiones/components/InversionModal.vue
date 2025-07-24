@@ -3,7 +3,7 @@ import {ref, watch, computed} from 'vue';
 import {storeToRefs} from 'pinia';
 import {useFinanceStore} from '../../../../stores/financeStore.js';
 import useVuelidate from '@vuelidate/core';
-import { required } from '@vuelidate/validators';
+import {required} from '@vuelidate/validators';
 
 // Componentes de PrimeVue
 import Dialog from 'primevue/dialog';
@@ -33,9 +33,9 @@ const submitted = ref(false);
 
 // Reglas de validación
 const rules = computed(() => ({
-  cuentaId: { required },
-  cuentaDestinoId: { required },
-  tipo: { required },
+  cuentaId: {required},
+  cuentaDestinoId: {required},
+  tipo: {required},
 }));
 const v$ = useVuelidate(rules, localInversion);
 
@@ -195,7 +195,8 @@ const saveInversion = async () => {
         </div>
         <div>
           <label for="cuentaDestinoId" class="block text-sm font-medium text-gray-700 mb-1">Cuenta de Destino</label>
-          <Dropdown id="cuentaDestinoId" v-model="localInversion.cuentaDestinoId" :options="cuentas" optionLabel="nombre"
+          <Dropdown id="cuentaDestinoId" v-model="localInversion.cuentaDestinoId" :options="cuentas"
+                    optionLabel="nombre"
                     optionValue="id" placeholder="Selecciona una cuenta"
                     :class="{'p-invalid': submitted && !localInversion.cuentaDestinoId}"/>
         </div>

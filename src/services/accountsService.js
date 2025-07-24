@@ -8,7 +8,7 @@ export default {
         return apiClient.post('/accounts', accountData);
     },
     updateAccount(accountId, accountData) {
-        return apiClient.put(`/accounts/${accountId}`, accountData);
+        return apiClient.patch(`/accounts/${accountId}`, accountData);
     },
     deleteAccount(accountId) {
         return apiClient.delete(`/accounts/${accountId}`);

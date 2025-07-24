@@ -16,25 +16,7 @@ const investmentsService = {
     deleteInvestment: (id) => {
         return api.delete(`/investments/${id}`);
     },
-    getInvestmentById: (id) => {
-        return api.get(`/investments/${id}`);
-    },
-    // --- Métodos para pagos de inversiones ---
-    createPayment: (investmentId, paymentData) => {
-        return api.post(`/investment-credit-payments/${investmentId}`, paymentData);
-    },
-    getInvestmentPayments: (investmentId) => {
-        return api.get(`/investment-credit-payments/${investmentId}`);
-    },
-    updateInvestmentPayment: (id, paymentData) => {
-        return api.put(`/investment-credit-payments/${id}`, paymentData);
-    },
-    deleteInvestmentPayment: (id) => {
-        return api.delete(`/investment-credit-payments/${id}`);
-    },
-    deletePayment: (investmentId, paymentId) => {
-        return api.delete(`/investment-credit-payments/${investmentId}/${paymentId}`);
-    }
+
 };
 
 export default investmentsService;
