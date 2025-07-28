@@ -1,54 +1,50 @@
 <template>
-  <Dialog
-    :visible="visible"
-    @update:visible="closeModal"
-    modal
-    :header="headerText"
-    :style="{ width: '450px' }"
-    class="p-fluid"
-  >
-    <div class="space-y-6 p-4">
-      <div>
-        <Input
-          v-model="v$.accountName.$model"
-          :errors="v$.accountName.$errors"
-          placeholder="Nombre de la cuenta*"
-          class="w-full"
-        />
+  <Dialog :visible="visible" modal header="Cuenta" :style="{ width: '400px' }" @update:visible="closeModal">
+    <form @submit.prevent="saveCuenta">
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-1">Nombre</label>
+        <InputText v-model="v$.name.$model" :class="{ 'p-invalid': v$.name.$error }" />
+        <small v-if="v$.name.$error" class="p-error">{{ v$.name.$errors[0].$message }}</small>
       </div>
-
-      <div>
-        <Select
-          v-model="v$.accountTypeId.$model"
-          :items="props.tiposCuenta"
-          :errors="v$.accountTypeId.$errors"
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-1">Tipo de Cuenta</label>
+        <Dropdown
+          v-model="v$.account_type_id.$model"
+          :options="tiposCuenta"
           optionLabel="nombre"
-          placeholder="Selecciona un tipo*"
-          class="w-full"
+          optionValue="value"
+          placeholder="Selecciona un tipo"
+          :class="{ 'p-invalid': v$.account_type_id.$error }"
         />
+        <small v-if="v$.account_type_id.$error" class="p-error">{{ v$.account_type_id.$errors[0].$message }}</small>
       </div>
-
-      <div>
-        <Number
-          v-model="v$.balance.$model"
-          :errors="v$.balance.$errors"
-          placeholder="Saldo de la cuenta*"
-          class="w-full"
-        />
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-1">Saldo</label>
+        <InputNumber v-model="v$.balance.$model" mode="currency" currency="USD" locale="en-US" :class="{ 'p-invalid': v$.balance.$error }" />
+        <small v-if="v$.balance.$error" class="p-error">{{ v$.balance.$errors[0].$message }}</small>
       </div>
-    </div>
-    <template #footer>
-      <Button label="Cancelar" icon="pi pi-times" text @click="closeModal" />
-      <Button label="Guardar" icon="pi pi-check" @click="saveCuenta" />
-    </template>
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-1">Moneda</label>
+        <InputText v-model="v$.currency.$model" :class="{ 'p-invalid': v$.currency.$error }" />
+        <small v-if="v$.currency.$error" class="p-error">{{ v$.currency.$errors[0].$message }}</small>
+      </div>
+      <div class="flex justify-end gap-2">
+        <Button label="Cancelar" icon="pi pi-times" text @click="closeModal" />
+        <Button label="Guardar" icon="pi pi-check" type="submit" />
+      </div>
+    </form>
   </Dialog>
 </template>
+
 <script setup>
-import { ref, watch, computed } from "vue";
-import Dialog from "primevue/dialog";
-import Button from "primevue/button";
+import { ref, watch } from "vue";
 import { helpers, required } from "@vuelidate/validators";
-import { useVuelidate } from "@vuelidate/core";
+import useVuelidate from "@vuelidate/core";
+import Dialog from "primevue/dialog";
+import Dropdown from "primevue/dropdown";
+import InputText from "primevue/inputtext";
+import InputNumber from "primevue/inputnumber";
+import Button from "primevue/button";
 
 const props = defineProps({
   visible: Boolean,
@@ -56,55 +52,43 @@ const props = defineProps({
   cuentaData: Object,
   tiposCuenta: Array,
 });
-
 const emit = defineEmits(["update:visible", "save"]);
 
-const localCuenta = ref({});
 const submitted = ref(false);
+
+const data = ref({
+  name: "",
+  account_type_id: null,
+  balance: 0,
+  currency: "USD",
+});
+
+const rules = {
+  name: { required: helpers.withMessage("El nombre es obligatorio.", required) },
+  account_type_id: { required: helpers.withMessage("El tipo de cuenta es obligatorio.", required) },
+  balance: { required: helpers.withMessage("El saldo es obligatorio.", required) },
+  currency: { required: helpers.withMessage("La moneda es obligatoria.", required) },
+};
+
+const v$ = useVuelidate(rules, data);
 
 watch(
   () => props.cuentaData,
   (newData) => {
     if (newData) {
-      data.value.accountName = newData.accountName || "";
-      // Buscar el objeto tipo de cuenta completo si es un id
-      if (typeof newData.accountTypeId === 'object') {
-        data.value.accountTypeId = newData.accountTypeId;
-      } else if (newData.accountTypeId) {
-        data.value.accountTypeId = props.tiposCuenta.find(tc => tc.value === newData.accountTypeId) || null;
-      } else {
-        data.value.accountTypeId = null;
-      }
+      data.value.name = newData.name || "";
+      data.value.account_type_id = newData.account_type_id?.value || newData.account_type_id || null;
       data.value.balance = newData.balance || 0;
+      data.value.currency = newData.currency || "USD";
     }
   },
-  { deep: true, immediate: true }
+  { immediate: true }
 );
 
 const closeModal = () => {
   emit("update:visible", false);
   submitted.value = false;
 };
-const data = ref({
-  accountName: "",
-  accountTypeId: null,
-  balance: 0,
-});
-const rules = {
-  accountName: {
-    required: helpers.withMessage("El nombre es obligatorio.", required),
-  },
-  accountTypeId: {
-    required: helpers.withMessage(
-      "El tipo de cuenta es obligatorio.",
-      required
-    ),
-  },
-  balance: {
-    required: helpers.withMessage("El saldo es obligatorio.", required),
-  },
-};
-const v$ = useVuelidate(rules, data);
 
 const saveCuenta = () => {
   submitted.value = true;
@@ -113,19 +97,15 @@ const saveCuenta = () => {
     return;
   }
   const payload = {
-    accountName: data.value.accountName,
-    accountTypeId: data.value.accountTypeId.value,
+    name: data.value.name,
+    account_type_id: data.value.account_type_id,
     balance: data.value.balance,
+    currency: data.value.currency,
   };
-  // Si estamos editando, incluir el id
   if (props.cuentaData && props.cuentaData.accountId) {
     payload.accountId = props.cuentaData.accountId;
   }
   emit("save", payload);
   closeModal();
 };
-
-const headerText = computed(() =>
-  props.isEditMode ? "Editar Cuenta" : "Nueva Cuenta"
-);
 </script>
