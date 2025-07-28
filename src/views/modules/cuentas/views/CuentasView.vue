@@ -23,7 +23,7 @@
             <tr v-for="(cuenta, idx) in cuentasDeBalance" :key="cuenta.id">
               <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ cuenta.name }}</td>
               <td class="px-6 py-4 text-sm">
-                <Tag :value="getTipoLabel(cuenta.accountTypeName)" :severity="getTipoTagSeverity(cuenta.accountTypeName)" />
+                <Tag :value="getTipoLabel( cuenta.account_type.name)" :severity="getTipoTagSeverity( cuenta.account_type.name)" />
               </td>
               <td class="px-6 py-4 text-sm font-semibold text-gray-700">
                 {{ formatCurrency(cuenta.balance, cuenta.currency) }}
@@ -75,7 +75,7 @@ const {
   updateCuenta,
   deleteCuenta,
 } = store;
-const { cuentas, tiposCuenta } = storeToRefs(store);
+const { accounts, accountTypes } = storeToRefs(store);
 
 // State
 const showModal = ref(false);
@@ -84,13 +84,13 @@ const cuentaToEdit = ref(null);
 
 // Lifecycle
 onMounted(() => {
-  if (cuentas.value.length === 0) fetchAccounts();
-  if (tiposCuenta.value.length === 0) fetchAccountTypes();
+  if (accounts.value.length === 0) fetchAccounts();
+  if (accountTypes.value.length === 0) fetchAccountTypes();
 });
 
 // Computed
-const cuentasDeBalance = computed(() => cuentas.value);
-const tiposCuentaDeBalance = computed(() => tiposCuenta.value);
+const cuentasDeBalance = computed(() => accounts.value);
+const tiposCuentaDeBalance = computed(() => accountTypes.value);
 
 // Helpers
 const formatCurrency = (value, currencyCode = "USD") =>
@@ -98,7 +98,7 @@ const formatCurrency = (value, currencyCode = "USD") =>
 
 const getTipoLabel = (tipoValue) => {
   if (!tipoValue) return "No Asignado";
-  const tipo = tiposCuenta.value.find(
+  const tipo = accountTypes.value.find(
     (t) => t.nombre.toLowerCase() === tipoValue.toLowerCase()
   );
   return tipo ? tipo.nombre : tipoValue;
@@ -131,13 +131,13 @@ const openEditModal = (cuenta) => {
   isEditMode.value = true;
   let tipoCuentaObj = null;
   if (cuenta.account_type_id && typeof cuenta.account_type_id === "object") {
-    tipoCuentaObj = tiposCuenta.value.find(tc => tc.value === cuenta.account_type_id.value) || cuenta.account_type_id;
+    tipoCuentaObj = accountTypes.value.find(tc => tc.value === cuenta.account_type_id.value) || cuenta.account_type_id;
   } else if (cuenta.account_type_id) {
-    tipoCuentaObj = tiposCuenta.value.find(tc => tc.value === cuenta.account_type_id) || null;
+    tipoCuentaObj = accountTypes.value.find(tc => tc.value === cuenta.account_type_id) || null;
   } else if (cuenta.accountTypeName) {
-    tipoCuentaObj = tiposCuenta.value.find(tc => tc.nombre.toLowerCase() === cuenta.accountTypeName.toLowerCase()) || null;
+    tipoCuentaObj = accountTypes.value.find(tc => tc.nombre.toLowerCase() === cuenta.accountTypeName.toLowerCase()) || null;
   } else if (cuenta.tipo) {
-    tipoCuentaObj = tiposCuenta.value.find(tc => tc.nombre.toLowerCase() === cuenta.tipo.toLowerCase()) || null;
+    tipoCuentaObj = accountTypes.value.find(tc => tc.nombre.toLowerCase() === cuenta.tipo.toLowerCase()) || null;
   }
   cuentaToEdit.value = {
     accountId: cuenta.id,

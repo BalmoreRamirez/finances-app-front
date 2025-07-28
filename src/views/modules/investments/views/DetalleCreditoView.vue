@@ -1,7 +1,7 @@
 <script setup>
 import {ref, onMounted, computed, onUnmounted} from 'vue';
 import {useRoute, useRouter} from 'vue-router';
-import {useInversionesStore} from '../../../../stores/inversionesStore.js';
+import {useInversionesStore} from '../../../../stores/investmentStore.js';
 import {storeToRefs} from 'pinia';
 import {useConfirm} from 'primevue/useconfirm';
 import {useToast} from 'primevue/usetoast';
@@ -28,7 +28,7 @@ const toast = useToast();
 
 // --- State del Store ---
 const {inversionActual: credito, pagos} = storeToRefs(store);
-const {fetchInvestmentById, fetchPagosPorInversion, addPago, deletePago} = store;
+const {fetchInvestmentById, fetchPaymentsByInvestment, addPayment, deletePago} = store;
 
 // --- State Local ---
 const isLoading = ref(true);
@@ -95,7 +95,7 @@ onMounted(async () => {
   if (investmentId) {
     await Promise.all([
       fetchInvestmentById(investmentId),
-      fetchPagosPorInversion(investmentId)
+      fetchPaymentsByInvestment(investmentId)
     ]);
   }
   isLoading.value = false;
@@ -153,7 +153,7 @@ const guardarPago = async () => {
   }
 
   try {
-    const success = await addPago({
+    const success = await addPayment({
       creditoId: credito.value.id,
       payment_date: nuevoPago.value.fecha.toISOString().slice(0, 10), // Formato esperado por el backend
       amount: nuevoPago.value.monto,

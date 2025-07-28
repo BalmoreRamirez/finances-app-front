@@ -1,49 +1,89 @@
-import { defineStore } from 'pinia';
-import { useCuentasStore } from './cuentasStore';
-import { useInversionesStore } from './inversionesStore';
-import { useTransaccionesStore } from './transaccionesStore';
+import { defineStore } from "pinia";
+import { useCuentasStore as useAccountsStore } from "./accountStore.js";
+import { useInversionesStore as useInvestmentsStore } from "./investmentStore.js";
+import { useTransaccionesStore as useTransactionsStore } from "./transactionStore.js";
 
-export const useFinanceStore = defineStore('finance', {
+export const useFinanceStore = defineStore("finance", {
   getters: {
-    cuentas: () => useCuentasStore().cuentas,
-    tiposCuenta: () => useCuentasStore().tiposCuenta,
-    inversiones: () => useInversionesStore().inversiones,
-    tiposInversion: () => useInversionesStore().tiposInversion,
-    pagos: () => useInversionesStore().pagos,
-    ingresos: () => useTransaccionesStore().ingresos,
-    gastos: () => useTransaccionesStore().gastos,
-    transacciones: () => useTransaccionesStore().transacciones,
-    balanceGeneral: (state) => {
-      const cuentas = useCuentasStore().cuentas;
-      const inversiones = useInversionesStore().inversiones;
-      const totalCuentas = cuentas.reduce((sum, cuenta) => sum + (Number(cuenta.saldo) || 0), 0);
-      const totalInversiones = inversiones.reduce((sum, inv) => sum + (Number(inv.monto) || 0), 0);
-      return totalCuentas + totalInversiones;
+    accounts: () => useAccountsStore().cuentas,
+    accountTypes: () => useAccountsStore().tiposCuenta,
+    investments: () => useInvestmentsStore().investments,
+    investmentTypes: () => useInvestmentsStore().typesInvestment,
+    payments: () => useInvestmentsStore().payments,
+    incomes: () => useTransactionsStore().ingresos,
+    expenses: () => useTransactionsStore().gastos,
+    transactions: () => useTransactionsStore().transacciones,
+    generalBalance: (state) => {
+      const accounts = useAccountsStore().cuentas || [];
+      const investments = useInvestmentsStore().investments || [];
+      const totalAccounts = accounts.reduce(
+        (sum, account) => sum + (Number(account.saldo) || 0),
+        0
+      );
+      const totalInvestments = investments.reduce(
+        (sum, investment) => sum + (Number(investment.monto) || 0),
+        0
+      );
+      return totalAccounts + totalInvestments;
     },
-    totalInvertido: () => useInversionesStore().inversiones.reduce((sum, inv) => sum + (inv.monto || 0), 0),
-    totalGanancias: () => useInversionesStore().inversiones.reduce((sum, inv) => sum + (inv.ganancia || 0), 0),
-    totalInvertidoActivo: () => {
-      return useInversionesStore().inversiones
-        .filter(inv => inv.estado === 'activa')
-        .reduce((sum, inv) => sum + (inv.monto || 0), 0);
+    totalInvested: () =>
+      (useInvestmentsStore().investments || []).reduce(
+        (sum, investment) => sum + (investment.monto || 0),
+        0
+      ),
+    totalEarnings: () =>
+      (useInvestmentsStore().investments || []).reduce(
+        (sum, investment) => sum + (investment.ganancia || 0),
+        0
+      ),
+    totalActiveInvested: () => {
+      const investments = useInvestmentsStore().investments || [];
+      return investments.filter((investment) => investment.estado === "activa")
+        .reduce((sum, investment) => sum + (investment.monto || 0), 0);
     },
   },
   actions: {
     // Cuentas
-    fetchAccounts() { return useCuentasStore().fetchAccounts(); },
-    fetchAccountTypes() { return useCuentasStore().fetchAccountTypes(); },
-    addCuenta(data) { return useCuentasStore().addCuenta(data); },
-    updateCuenta(data) { return useCuentasStore().updateCuenta(data); },
-    deleteCuenta(id) { return useCuentasStore().deleteCuenta(id); },
+    fetchAccounts() {
+      return useAccountsStore().fetchAccounts();
+    },
+    fetchAccountTypes() {
+      return useAccountsStore().fetchAccountTypes();
+    },
+    addCuenta(data) {
+      return useAccountsStore().addCuenta(data);
+    },
+    updateCuenta(data) {
+      return useAccountsStore().updateCuenta(data);
+    },
+    deleteCuenta(id) {
+      return useAccountsStore().deleteCuenta(id);
+    },
     // Inversiones
-    fetchInversiones() { return useInversionesStore().fetchInversiones(); },
-    fetchTiposInversion() { return useInversionesStore().fetchTiposInversion(); },
-    addInversion(data) { return useInversionesStore().addInversion(data); },
-    updateInversion(id, data) { return useInversionesStore().updateInversion(id, data); },
-    deleteInversion(id) { return useInversionesStore().deleteInversion(id); },
+    fetchInvestments() {
+      return useInvestmentsStore().fetchInvestments();
+    },
+    fetchInvestmentTypes() {
+      return useInvestmentsStore().fetchInvestmentTypes();
+    },
+    addInvestment(data) {
+      return useInvestmentsStore().addInvestment(data);
+    },
+    updateInvestment(id, data) {
+      return useInvestmentsStore().updateInvestment(id, data);
+    },
+    deleteInvestment(id) {
+      return useInvestmentsStore().deleteInvestment(id);
+    },
     // Transacciones
-    addTransaccion(data) { return useTransaccionesStore().addTransaccion(data); },
-    updateTransaccion(data) { return useTransaccionesStore().updateTransaccion(data); },
-    deleteTransaccion(data) { return useTransaccionesStore().deleteTransaccion(data); },
+    addTransaccion(data) {
+      return useTransactionsStore().addTransaccion(data);
+    },
+    updateTransaccion(data) {
+      return useTransactionsStore().updateTransaccion(data);
+    },
+    deleteTransaccion(data) {
+      return useTransactionsStore().deleteTransaccion(data);
+    },
   },
 });

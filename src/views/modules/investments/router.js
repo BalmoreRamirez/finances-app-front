@@ -2,7 +2,7 @@ export default [
     {
         path: '/inversiones',
         name: 'inversiones',
-        component: () => import('./views/InversionesView.vue'),
+        component: () => import('./views/InvestMentsView.vue'),
     },
     {
         path: '/inversiones/:id',

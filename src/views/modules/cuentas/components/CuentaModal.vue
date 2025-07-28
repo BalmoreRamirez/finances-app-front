@@ -1,38 +1,48 @@
 <template>
-  <Dialog :visible="visible" modal header="Cuenta" :style="{ width: '400px' }" @update:visible="closeModal">
-    <form @submit.prevent="saveCuenta">
-      <div class="mb-4">
-        <label class="block text-sm font-medium mb-1">Nombre</label>
-        <InputText v-model="v$.name.$model" :class="{ 'p-invalid': v$.name.$error }" />
-        <small v-if="v$.name.$error" class="p-error">{{ v$.name.$errors[0].$message }}</small>
-      </div>
-      <div class="mb-4">
-        <label class="block text-sm font-medium mb-1">Tipo de Cuenta</label>
-        <Dropdown
-          v-model="v$.account_type_id.$model"
-          :options="tiposCuenta"
-          optionLabel="nombre"
-          optionValue="value"
-          placeholder="Selecciona un tipo"
-          :class="{ 'p-invalid': v$.account_type_id.$error }"
+  <Dialog
+    :visible="visible"
+    modal
+    header="Cuenta"
+    :style="{ width: '400px' }"
+    @update:visible="closeModal"
+  >
+    <div class="space-y-6 p-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      <div>
+        <Input
+          v-model="v$.name.$model"
+          :error="v$.name.$error"
+          placeholder="Ingrese el nombre de la cuenta"
+          class="w-full"
         />
-        <small v-if="v$.account_type_id.$error" class="p-error">{{ v$.account_type_id.$errors[0].$message }}</small>
+      </div>
+      <div>
+        <Select
+          v-model="v$.account_type_id.$model"
+          :errors="v$.account_type_id.$error"
+          :items="tiposCuenta"
+          optionLabel="nombre"
+          placeholder="Selecciona un tipo de cuenta"
+        />
       </div>
       <div class="mb-4">
-        <label class="block text-sm font-medium mb-1">Saldo</label>
-        <InputNumber v-model="v$.balance.$model" mode="currency" currency="USD" locale="en-US" :class="{ 'p-invalid': v$.balance.$error }" />
-        <small v-if="v$.balance.$error" class="p-error">{{ v$.balance.$errors[0].$message }}</small>
+        <Number
+          v-model="v$.balance.$model"
+          :class="{ 'p-invalid': v$.balance.$error }"
+        />
       </div>
       <div class="mb-4">
-        <label class="block text-sm font-medium mb-1">Moneda</label>
-        <InputText v-model="v$.currency.$model" :class="{ 'p-invalid': v$.currency.$error }" />
-        <small v-if="v$.currency.$error" class="p-error">{{ v$.currency.$errors[0].$message }}</small>
+        <Input
+          v-model="v$.currency.$model"
+          :errors="v$.currency.$error"
+          placeholder="Ingrese la moneda"
+        />
       </div>
-      <div class="flex justify-end gap-2">
-        <Button label="Cancelar" icon="pi pi-times" text @click="closeModal" />
-        <Button label="Guardar" icon="pi pi-check" type="submit" />
-      </div>
-    </form>
+    </div>
+    <div class="flex justify-end gap-2">
+      <Button label="Cancelar" icon="pi pi-times" text @click="closeModal" />
+      <Button label="Guardar" icon="pi pi-check" @click="saveCuenta" />
+    </div>
   </Dialog>
 </template>
 
@@ -41,9 +51,6 @@ import { ref, watch } from "vue";
 import { helpers, required } from "@vuelidate/validators";
 import useVuelidate from "@vuelidate/core";
 import Dialog from "primevue/dialog";
-import Dropdown from "primevue/dropdown";
-import InputText from "primevue/inputtext";
-import InputNumber from "primevue/inputnumber";
 import Button from "primevue/button";
 
 const props = defineProps({
@@ -64,10 +71,21 @@ const data = ref({
 });
 
 const rules = {
-  name: { required: helpers.withMessage("El nombre es obligatorio.", required) },
-  account_type_id: { required: helpers.withMessage("El tipo de cuenta es obligatorio.", required) },
-  balance: { required: helpers.withMessage("El saldo es obligatorio.", required) },
-  currency: { required: helpers.withMessage("La moneda es obligatoria.", required) },
+  name: {
+    required: helpers.withMessage("El nombre es obligatorio.", required),
+  },
+  account_type_id: {
+    required: helpers.withMessage(
+      "El tipo de cuenta es obligatorio.",
+      required
+    ),
+  },
+  balance: {
+    required: helpers.withMessage("El saldo es obligatorio.", required),
+  },
+  currency: {
+    required: helpers.withMessage("La moneda es obligatoria.", required),
+  },
 };
 
 const v$ = useVuelidate(rules, data);
@@ -77,14 +95,20 @@ watch(
   (newData) => {
     if (newData) {
       data.value.name = newData.name || "";
-      data.value.account_type_id = newData.account_type_id?.value || newData.account_type_id || null;
-      data.value.balance = newData.balance || 0;
+      // Busca el objeto completo en tiposCuenta
+      data.value.account_type_id =
+        props.tiposCuenta.find(
+          t => t.value === (newData.account_type_id?.value || newData.account_type_id)
+        ) || null;
+      data.value.balance =
+        newData.balance !== undefined && newData.balance !== null
+          ? Number(newData.balance)
+          : 0;
       data.value.currency = newData.currency || "USD";
     }
   },
   { immediate: true }
 );
-
 const closeModal = () => {
   emit("update:visible", false);
   submitted.value = false;
@@ -98,7 +122,7 @@ const saveCuenta = () => {
   }
   const payload = {
     name: data.value.name,
-    account_type_id: data.value.account_type_id,
+    account_type_id: data.value.account_type_id.value,
     balance: data.value.balance,
     currency: data.value.currency,
   };
