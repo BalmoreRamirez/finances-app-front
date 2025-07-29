@@ -11,15 +11,15 @@
       <div>
         <Input
           v-model="v$.name.$model"
-          :error="v$.name.$error"
+          :errors="v$.name.$errors"
           placeholder="Ingrese el nombre de la cuenta"
           class="w-full"
         />
       </div>
-      <div>
+      <div>{{tiposCuenta}}
         <Select
           v-model="v$.account_type_id.$model"
-          :errors="v$.account_type_id.$error"
+          :errors="v$.account_type_id.$errors"
           :items="tiposCuenta"
           optionLabel="nombre"
           placeholder="Selecciona un tipo de cuenta"
@@ -95,15 +95,8 @@ watch(
   (newData) => {
     if (newData) {
       data.value.name = newData.name || "";
-      // Busca el objeto completo en tiposCuenta
-      data.value.account_type_id =
-        props.tiposCuenta.find(
-          t => t.value === (newData.account_type_id?.value || newData.account_type_id)
-        ) || null;
-      data.value.balance =
-        newData.balance !== undefined && newData.balance !== null
-          ? Number(newData.balance)
-          : 0;
+      data.value.account_type_id = props.tiposCuenta.find((t) => t.value === (newData.account_type_id?.value || newData.account_type_id)) || null;
+      data.value.balance = newData.balance !== undefined && newData.balance !== null ? Number(newData.balance) : 0;
       data.value.currency = newData.currency || "USD";
     }
   },

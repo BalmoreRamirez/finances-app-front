@@ -5,10 +5,13 @@ import { useTransaccionesStore as useTransactionsStore } from "./transactionStor
 
 export const useFinanceStore = defineStore("finance", {
   getters: {
+    // accounts
     accounts: () => useAccountsStore().cuentas,
     accountTypes: () => useAccountsStore().tiposCuenta,
+    // investments
     investments: () => useInvestmentsStore().investments,
     investmentTypes: () => useInvestmentsStore().typesInvestment,
+    // -----
     payments: () => useInvestmentsStore().payments,
     incomes: () => useTransactionsStore().ingresos,
     expenses: () => useTransactionsStore().gastos,
@@ -43,7 +46,7 @@ export const useFinanceStore = defineStore("finance", {
     },
   },
   actions: {
-    // Cuentas
+    // accounts
     fetchAccounts() {
       return useAccountsStore().fetchAccounts();
     },
@@ -59,7 +62,7 @@ export const useFinanceStore = defineStore("finance", {
     deleteCuenta(id) {
       return useAccountsStore().deleteCuenta(id);
     },
-    // Inversiones
+    // investments
     fetchInvestments() {
       return useInvestmentsStore().fetchInvestments();
     },

@@ -10,21 +10,25 @@
     const activeTab = ref('overview');
     const tabs = ['overview', 'income', 'expenses'];
 
+
     const totalIngresosMes = computed(() => {
+      if (!ingresos?.value) return 0;
       const now = new Date();
       return ingresos.value
-          .filter(i => new Date(i.fecha).getMonth() === now.getMonth() && new Date(i.fecha).getFullYear() === now.getFullYear())
-          .reduce((sum, i) => sum + i.monto, 0);
+        .filter(i => new Date(i.fecha).getMonth() === now.getMonth() && new Date(i.fecha).getFullYear() === now.getFullYear())
+        .reduce((sum, i) => sum + i.monto, 0);
     });
 
     const totalGastosMes = computed(() => {
+      if (!gastos?.value) return 0;
       const now = new Date();
       return gastos.value
-          .filter(g => new Date(g.fecha).getMonth() === now.getMonth() && new Date(g.fecha).getFullYear() === now.getFullYear())
-          .reduce((sum, g) => sum + g.monto, 0);
+        .filter(g => new Date(g.fecha).getMonth() === now.getMonth() && new Date(g.fecha).getFullYear() === now.getFullYear())
+        .reduce((sum, g) => sum + g.monto, 0);
     });
 
     const incomeCategoryData = computed(() => {
+      if (!ingresos?.value) return { labels: [], data: [] };
       const data = ingresos.value.reduce((acc, ingreso) => {
         acc[ingreso.categoria] = (acc[ingreso.categoria] || 0) + ingreso.monto;
         return acc;
@@ -33,6 +37,7 @@
     });
 
     const expenseCategoryData = computed(() => {
+      if (!gastos?.value) return { labels: [], data: [] };
       const data = gastos.value.reduce((acc, gasto) => {
         acc[gasto.categoria] = (acc[gasto.categoria] || 0) + gasto.monto;
         return acc;
