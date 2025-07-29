@@ -7,6 +7,7 @@ export const useFinanceStore = defineStore("finance", {
   getters: {
     // accounts
     accounts: () => useAccountsStore().cuentas,
+    accountForSelect: () => useAccountsStore().accountsForSelect,
     accountTypes: () => useAccountsStore().tiposCuenta,
     // investments
     investments: () => useInvestmentsStore().investments,
@@ -46,6 +47,9 @@ export const useFinanceStore = defineStore("finance", {
     },
   },
   actions: {
+    fetchAccountsForSelect() {
+      return useAccountsStore().fetchAccountsForSelect();
+    },
     // accounts
     fetchAccounts() {
       return useAccountsStore().fetchAccounts();

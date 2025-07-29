@@ -22,8 +22,8 @@
         <div>
           <Select
               v-model="v$.account_id.$model"
+               :errors="v$.account_id.$errors"
               :items="cuentas"
-              :errors="v$.account_id.$errors"
               optionLabel="nombre"
               placeholder="Cuenta de Origen"
               class="w-full"
@@ -137,9 +137,6 @@ import {ref, watch, computed} from "vue";
 import {helpers, required} from "@vuelidate/validators";
 import useVuelidate from "@vuelidate/core";
 import Dialog from "primevue/dialog";
-import Select from "primevue/dropdown";
-import Input from "primevue/inputtext";
-import Number from "primevue/inputnumber";
 import Calendar from "primevue/calendar";
 import Button from "primevue/button";
 
@@ -199,25 +196,42 @@ const v$ = useVuelidate(rules, data);
 
 // --- WATCHERS ---
 watch(
-    () => props.inversionData,
-    (newData) => {
-      if (newData) {
-        data.value.investment_type_id = newData.investment_type_id ?? null;
-        data.value.account_id = newData.account_id ?? null;
-        data.value.name = newData.name ?? "";
-        data.value.principal = newData.principal !== undefined && newData.principal !== null
-            ? +newData.principal
-            : 0;
-        data.value.expected_return = newData.expected_return !== undefined && newData.expected_return !== null
-            ? +newData.expected_return
-            : 0;
-        data.value.start_date = newData.start_date ? new Date(newData.start_date) : null;
-        data.value.end_date = newData.end_date ? new Date(newData.end_date) : null;
-        data.value.status = newData.status ?? "";
-        data.value.notes = newData.notes ?? ""
-      }
-    },
-    {immediate: true}
+  () => props.inversionData,
+  (newData) => {
+    if (newData) {
+      // Buscar el objeto completo en tiposInversion y cuentas usando value
+      data.value.investment_type_id = Array.isArray(props.tiposInversion)
+        ? props.tiposInversion.find(t => t.value == newData.investment_type_id) || null
+        : null;
+      data.value.account_id = Array.isArray(props.cuentas)
+        ? props.cuentas.find(c => c.value == newData.account_id) || null
+        : null;
+      data.value.name = newData.name ?? "";
+      data.value.principal = newData.principal !== undefined && newData.principal !== null
+        ? +newData.principal
+        : 0;
+      data.value.expected_return = newData.expected_return !== undefined && newData.expected_return !== null
+        ? +newData.expected_return
+        : 0;
+      data.value.start_date = newData.start_date ? new Date(newData.start_date) : null;
+      data.value.end_date = newData.end_date ? new Date(newData.end_date) : null;
+      data.value.status = newData.status ?? "";
+      data.value.notes = newData.notes ?? "";
+      data.value.id = newData.id ?? null;
+    } else {
+      data.value.investment_type_id = null;
+      data.value.account_id = null;
+      data.value.name = "";
+      data.value.principal = 0;
+      data.value.expected_return = 0;
+      data.value.start_date = null;
+      data.value.end_date = null;
+      data.value.status = "";
+      data.value.notes = "";
+      data.value.id = null;
+    }
+  },
+  { immediate: true }
 );
 
 // --- COMPUTEDS ---
@@ -248,20 +262,20 @@ const saveInversion = () => {
     return;
   }
   emit("save", {
-    investment_type_id: data.value.investment_type_id ?? null,
+    investment_type_id: data.value.investment_type_id?.value ?? null,
     name: data.value.name,
     principal: Number(data.value.principal),
     expected_return: Number(data.value.expected_return),
-    account_id: data.value.account_id ?? null,
+    account_id: data.value.account_id?.value ?? null,
     start_date: data.value.start_date
-        ? data.value.start_date.toISOString().slice(0, 10)
-        : null,
+      ? data.value.start_date.toISOString().slice(0, 10)
+      : null,
     end_date: data.value.end_date
-        ? data.value.end_date.toISOString().slice(0, 10)
-        : null,
+      ? data.value.end_date.toISOString().slice(0, 10)
+      : null,
     status: data.value.status,
     notes: data.value.notes,
-    ...(data.value.id ? {id: data.value.id} : {}),
+    ...(data.value.id ? { id: data.value.id } : {}),
   });
 };
 </script>

@@ -6,9 +6,21 @@ export const useCuentasStore = defineStore("cuentas", {
     cuentas: [],
     tiposCuenta: [],
     cuentaActual: null,
+    accountsForSelect: [],
   }),
 
   actions: {
+    async fetchAccountsForSelect() {
+      try {
+        const response = await cuentasService.getAccounts();
+        this.accountsForSelect = response.data.map((account) => ({
+          nombre: account.name,
+          value: account.id,
+        }));
+      } catch (error) {
+        console.error("Error al obtener cuentas:", error);
+      }
+    },
     async fetchAccounts() {
       try {
         const response = await cuentasService.getAccounts();
