@@ -1,42 +1,42 @@
 <template>
   <Dialog
-      :visible="props.visible"
-      :style="{ width: '650px' }"
-      :header="props.isEditMode ? 'Editar Inversión' : 'Registrar Inversión'"
-      modal
-      class="p-fluid"
-      @update:visible="closeModal"
+    :visible="props.visible"
+    :style="{ width: '650px' }"
+    :header="props.isEditMode ? 'Editar Inversión' : 'Registrar Inversión'"
+    modal
+    class="p-fluid"
+    @update:visible="closeModal"
   >
     <div class="space-y-6 p-4">
       <!-- Campos Comunes -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Select
-              v-model="v$.investment_type_id.$model"
-              :errors="v$.investment_type_id.$errors"
-              :items="tiposInversion"
-              optionLabel="nombre"
-              placeholder="Tipo de Inversión*"
+            v-model="v$.investment_type_id.$model"
+            :errors="v$.investment_type_id.$errors"
+            :items="tiposInversion"
+            optionLabel="nombre"
+            placeholder="Tipo de Inversión*"
           />
         </div>
         <div>
           <Select
-              v-model="v$.account_id.$model"
-               :errors="v$.account_id.$errors"
-              :items="cuentas"
-              optionLabel="nombre"
-              placeholder="Cuenta de Origen"
-              class="w-full"
+            v-model="v$.account_id.$model"
+            :errors="v$.account_id.$errors"
+            :items="cuentas"
+            optionLabel="nombre"
+            placeholder="Cuenta de Origen"
+            class="w-full"
           />
         </div>
       </div>
       <!-- Descripción removida -->
       <div>
         <Input
-            v-model="v$.name.$model"
-            :errors="v$.name.$errors"
-            placeholder="Nombre inversión*"
-            class="w-full"
+          v-model="v$.name.$model"
+          :errors="v$.name.$errors"
+          placeholder="Nombre inversión*"
+          class="w-full"
         />
       </div>
 
@@ -44,36 +44,36 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Number
-              v-model="v$.principal.$model"
-              :errors="v$.principal.$errors"
-              placeholder="Cantidad"
-              :min="1"
-              class="w-full"
+            v-model="v$.principal.$model"
+            :errors="v$.principal.$errors"
+            placeholder="Total Invertido*"
+            :min="1"
+            class="w-full"
           />
         </div>
         <div>
           <Number
-              v-model="v$.expected_return.$model"
-              :errors="v$.expected_return.$errors"
-              placeholder="Costo Unitario"
-              :min="1"
-              class="w-full"
+            v-model="v$.expected_return.$model"
+            :errors="v$.expected_return.$errors"
+            placeholder="Retorno Esperado*"
+            :min="1"
+            class="w-full"
           />
         </div>
       </div>
 
       <div>
         <Input
-            v-model="v$.notes.$model"
-            :errors="v$.notes.$errors"
-            placeholder="Notas"
-            class="w-full"
+          v-model="v$.notes.$model"
+          :errors="v$.notes.$errors"
+          placeholder="Commentario*"
+          class="w-full"
         />
       </div>
     </div>
     <!-- Resumen de Cálculos (siempre visible) -->
     <div
-        class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-3 rounded-md"
+      class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-3 rounded-md"
     >
       <div>
         <p class="text-sm text-gray-500">Monto Total Invertido</p>
@@ -99,42 +99,42 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label
-            for="fechaInversion"
-            class="block text-sm font-medium text-gray-700 mb-1"
-        >Fecha de Inversión / Compra</label
+          for="fechaInversion"
+          class="block text-sm font-medium text-gray-700 mb-1"
+          >Fecha de Inversión / Compra</label
         >
         <Calendar
-            v-model="v$.start_date.$model"
-            :errors="v$.start_date.$errors"
-            dateFormat="dd/mm/yy"
-            showIcon
+          v-model="v$.start_date.$model"
+          :errors="v$.start_date.$errors"
+          dateFormat="dd/mm/yy"
+          showIcon
         />
       </div>
       <div>
         <label
-            for="fechaVencimiento"
-            class="block text-sm font-medium text-gray-700 mb-1"
-        >Fecha de Vencimiento / Venta</label
+          for="fechaVencimiento"
+          class="block text-sm font-medium text-gray-700 mb-1"
+          >Fecha de Vencimiento / Venta</label
         >
         <Calendar
-            v-model="v$.end_date.$model"
-            :errors="v$.end_date.$errors"
-            dateFormat="dd/mm/yy"
-            showIcon
+          v-model="v$.end_date.$model"
+          :errors="v$.end_date.$errors"
+          dateFormat="dd/mm/yy"
+          showIcon
         />
       </div>
     </div>
 
     <template #footer>
-      <Button label="Cancelar" icon="pi pi-times" text @click="closeModal"/>
-      <Button label="Guardar" icon="pi pi-check" @click="saveInversion"/>
+      <Button label="Cancelar" icon="pi pi-times" text @click="closeModal" />
+      <Button label="Guardar" icon="pi pi-check" @click="saveInversion" />
     </template>
   </Dialog>
 </template>
 <script setup>
 // --- IMPORTS ---
-import {ref, watch, computed} from "vue";
-import {helpers, required} from "@vuelidate/validators";
+import { ref, watch, computed } from "vue";
+import { helpers, required } from "@vuelidate/validators";
 import useVuelidate from "@vuelidate/core";
 import Dialog from "primevue/dialog";
 import Calendar from "primevue/calendar";
@@ -168,7 +168,10 @@ const submitted = ref(false);
 // --- VALIDACIONES ---
 const rules = {
   investment_type_id: {
-    required: helpers.withMessage("El tipo de inversión es obligatorio.", required),
+    required: helpers.withMessage(
+      "El tipo de inversión es obligatorio.",
+      required
+    ),
   },
   name: {
     required: helpers.withMessage("El nombre es obligatorio.", required),
@@ -177,16 +180,25 @@ const rules = {
     required: helpers.withMessage("El monto es obligatorio.", required),
   },
   expected_return: {
-    required: helpers.withMessage("El retorno esperado es obligatorio.", required),
+    required: helpers.withMessage(
+      "El retorno esperado es obligatorio.",
+      required
+    ),
   },
   account_id: {
     required: helpers.withMessage("La cuenta es obligatoria.", required),
   },
   start_date: {
-    required: helpers.withMessage("La fecha de inversión es obligatoria.", required),
+    required: helpers.withMessage(
+      "La fecha de inversión es obligatoria.",
+      required
+    ),
   },
   end_date: {
-    required: helpers.withMessage("La fecha de vencimiento es obligatoria.", required),
+    required: helpers.withMessage(
+      "La fecha de vencimiento es obligatoria.",
+      required
+    ),
   },
   notes: {
     required: helpers.withMessage("Las notas son obligatorias.", required),
@@ -201,23 +213,32 @@ watch(
     if (newData) {
       // Buscar el objeto completo en tiposInversion y cuentas usando value
       data.value.investment_type_id = Array.isArray(props.tiposInversion)
-        ? props.tiposInversion.find(t => t.value == newData.investment_type_id) || null
+        ? props.tiposInversion.find(
+            (t) => t.value == newData.investment_type_id
+          ) || null
         : null;
       data.value.account_id = Array.isArray(props.cuentas)
-        ? props.cuentas.find(c => c.value == newData.account_id) || null
+        ? props.cuentas.find((c) => c.value == newData.account_id) || null
         : null;
       data.value.name = newData.name ?? "";
-      data.value.principal = newData.principal !== undefined && newData.principal !== null
-        ? +newData.principal
-        : 0;
-      data.value.expected_return = newData.expected_return !== undefined && newData.expected_return !== null
-        ? +newData.expected_return
-        : 0;
-      data.value.start_date = newData.start_date ? new Date(newData.start_date) : null;
-      data.value.end_date = newData.end_date ? new Date(newData.end_date) : null;
+      data.value.principal =
+        newData.principal !== undefined && newData.principal !== null
+          ? +newData.principal
+          : 0;
+      data.value.expected_return =
+        newData.expected_return !== undefined &&
+        newData.expected_return !== null
+          ? +newData.expected_return
+          : 0;
+      data.value.start_date = newData.start_date
+        ? new Date(newData.start_date)
+        : null;
+      data.value.end_date = newData.end_date
+        ? new Date(newData.end_date)
+        : null;
       data.value.status = newData.status ?? "";
       data.value.notes = newData.notes ?? "";
-      data.value.id = newData.id ?? null;
+      //data.value.id = newData.id ?? null;
     } else {
       data.value.investment_type_id = null;
       data.value.account_id = null;
@@ -228,7 +249,7 @@ watch(
       data.value.end_date = null;
       data.value.status = "";
       data.value.notes = "";
-      data.value.id = null;
+      //data.value.id = null;
     }
   },
   { immediate: true }
@@ -237,9 +258,8 @@ watch(
 // --- COMPUTEDS ---
 const montoCalculado = computed(() => +data.value.principal || 0);
 const gananciaCalculada = computed(
-    () => (+data.value.expected_return || 0) - (+data.value.principal || 0)
-);
-const montoTotalCalculado = computed(() => +data.value.expected_return || 0);
+  () => (+data.value.expected_return || 0))
+const montoTotalCalculado = computed(() => +data.value.expected_return + +data.value.principal || 0);
 
 // --- MÉTODOS ---
 const formatCurrency = (value) => {
@@ -273,7 +293,7 @@ const saveInversion = () => {
     end_date: data.value.end_date
       ? data.value.end_date.toISOString().slice(0, 10)
       : null,
-    status: data.value.status,
+    status: "activa", // Default status, can be changed later
     notes: data.value.notes,
     ...(data.value.id ? { id: data.value.id } : {}),
   });

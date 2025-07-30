@@ -150,7 +150,7 @@
               <td
                 class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600"
               >
-                $ {{ inversion.expected_return - inversion.principal || 0 }}
+                $ {{ inversion.expected_return|| 0 }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
                 <Tag
@@ -336,8 +336,11 @@ const openCreateModal = () => {
 };
 
 const openEditModal = (inversion) => {
+
+  
   isEditMode.value = true;
   inversionToEdit.value = { ...inversion };
+    console.log("Editando inversión:", inversionToEdit.value);
   showModal.value = true;
 };
 
@@ -345,9 +348,11 @@ const handleSaveInversion = async (inversionData) => {
   let success = false;
   const action = isEditMode.value ? "actualizada" : "creada";
   if (isEditMode.value) {
-    success = await updateInversion(inversionToEdit.value.id, inversionData);
+    console.log("id de la inversión a actualizar:", inversionToEdit.value.id);
+    
+    success = await updateInvestment(inversionToEdit.value.id, inversionData);
   } else {
-    success = await addInversion(inversionData);
+    success = await addInvestment(inversionData);
   }
   toast.add({
     severity: success ? "success" : "error",
