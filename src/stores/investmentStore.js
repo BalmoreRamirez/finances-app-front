@@ -61,9 +61,9 @@ export const useInversionesStore = defineStore("inversiones", {
     async fetchInvestmentById(id) {
       try {
         const response = await investmentsService.getInvestmentById(id);
-        this.inversionActual = response.data;
+        this.currentInvestment = response.data;
       } catch (error) {
-        this.inversionActual = null;
+        this.currentInvestment = null;
         console.error("Error al obtener la inversión:", error);
       }
     },
@@ -72,9 +72,9 @@ export const useInversionesStore = defineStore("inversiones", {
         const response = await investmentsService.getPagosPorInversion(
           investmentId
         );
-        this.pagos = Array.isArray(response.data) ? response.data : [];
+        this.payments = Array.isArray(response.data) ? response.data : [];
       } catch (error) {
-        this.pagos = [];
+        this.payments = [];
         console.error("Error al obtener los pagos:", error);
       }
     },

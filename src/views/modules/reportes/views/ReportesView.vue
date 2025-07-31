@@ -5,7 +5,8 @@
   import { storeToRefs } from 'pinia';
 
   const store = useFinanceStore();
-  const { ingresos, gastos } = storeToRefs(store);
+  // Fallback a array vacío si el getter no existe o es undefined
+  const { ingresos = ref([]), gastos = ref([]) } = storeToRefs(store);
 
   // --- DATOS COMPUTADOS PARA REPORTES ---
 
@@ -16,20 +17,24 @@
     const balanceByMonth = Array(12).fill(0);
     const currentYear = new Date().getFullYear();
 
+    // Asegura arrays válidos
+    const ingresosArr = ingresos?.value || [];
+    const gastosArr = gastos?.value || [];
+
     // Calcular balance inicial de años anteriores
-    let cumulativeBalance = [...ingresos.value, ...gastos.value]
-        .filter(t => new Date(t.fecha).getFullYear() < currentYear)
-        .reduce((acc, t) => acc + (t.monto * (t.categoria ? -1 : 1)), 0);
+    let cumulativeBalance = [...ingresosArr, ...gastosArr]
+      .filter(t => new Date(t.fecha).getFullYear() < currentYear)
+      .reduce((acc, t) => acc + (t.monto * (t.categoria ? -1 : 1)), 0);
 
     // Procesar datos del año actual
     labels.forEach((_, monthIndex) => {
-      const monthlyIncome = ingresos.value
-          .filter(i => new Date(i.fecha).getFullYear() === currentYear && new Date(i.fecha).getMonth() === monthIndex)
-          .reduce((sum, i) => sum + i.monto, 0);
+      const monthlyIncome = ingresosArr
+        .filter(i => new Date(i.fecha).getFullYear() === currentYear && new Date(i.fecha).getMonth() === monthIndex)
+        .reduce((sum, i) => sum + i.monto, 0);
 
-      const monthlyExpenses = gastos.value
-          .filter(g => new Date(g.fecha).getFullYear() === currentYear && new Date(g.fecha).getMonth() === monthIndex)
-          .reduce((sum, g) => sum + g.monto, 0);
+      const monthlyExpenses = gastosArr
+        .filter(g => new Date(g.fecha).getFullYear() === currentYear && new Date(g.fecha).getMonth() === monthIndex)
+        .reduce((sum, g) => sum + g.monto, 0);
 
       incomeByMonth[monthIndex] = monthlyIncome;
       expensesByMonth[monthIndex] = monthlyExpenses;

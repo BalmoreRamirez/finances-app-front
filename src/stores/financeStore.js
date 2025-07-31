@@ -25,25 +25,24 @@ export const useFinanceStore = defineStore("finance", {
         0
       );
       const totalInvestments = investments.reduce(
-        (sum, investment) => sum + (Number(investment.monto) || 0),
+        (sum, investment) => sum + (Number(investment.principal) || 0),
         0
       );
       return totalAccounts + totalInvestments;
     },
     totalInvested: () =>
       (useInvestmentsStore().investments || []).reduce(
-        (sum, investment) => sum + (investment.monto || 0),
+        (sum, investment) => sum + (Number(investment.principal) || 0),
         0
       ),
     totalEarnings: () =>
       (useInvestmentsStore().investments || []).reduce(
-        (sum, investment) => sum + (investment.ganancia || 0),
+        (sum, investment) => sum + (Number(investment.expected_return) || 0),
         0
       ),
     totalActiveInvested: () => {
       const investments = useInvestmentsStore().investments || [];
-      return investments.filter((investment) => investment.estado === "activa")
-        .reduce((sum, investment) => sum + (investment.monto || 0), 0);
+      return investments.length;
     },
   },
   actions: {

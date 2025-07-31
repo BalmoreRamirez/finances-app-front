@@ -16,7 +16,7 @@
           class="w-full"
         />
       </div>
-      <div>{{tiposCuenta}}
+      <div>
         <Select
           v-model="v$.account_type_id.$model"
           :errors="v$.account_type_id.$errors"
@@ -36,6 +36,13 @@
           v-model="v$.currency.$model"
           :errors="v$.currency.$error"
           placeholder="Ingrese la moneda"
+        />
+      </div>
+       <div class="mb-4">
+        <Input
+          v-model="v$.description.$model"
+          :errors="v$.description.$error"
+          placeholder="Description"
         />
       </div>
     </div>
@@ -68,6 +75,7 @@ const data = ref({
   account_type_id: null,
   balance: 0,
   currency: "USD",
+  description: "",
 });
 
 const rules = {
@@ -86,6 +94,9 @@ const rules = {
   currency: {
     required: helpers.withMessage("La moneda es obligatoria.", required),
   },
+  description: {
+    required: helpers.withMessage("La descripción es obligatoria.", required),
+  },
 };
 
 const v$ = useVuelidate(rules, data);
@@ -95,8 +106,16 @@ watch(
   (newData) => {
     if (newData) {
       data.value.name = newData.name || "";
-      data.value.account_type_id = props.tiposCuenta.find((t) => t.value === (newData.account_type_id?.value || newData.account_type_id)) || null;
-      data.value.balance = newData.balance !== undefined && newData.balance !== null ? Number(newData.balance) : 0;
+      data.value.account_type_id =
+        props.tiposCuenta.find(
+          (t) =>
+            t.value ===
+            (newData.account_type_id?.value || newData.account_type_id)
+        ) || null;
+      data.value.balance =
+        newData.balance !== undefined && newData.balance !== null
+          ? Number(newData.balance)
+          : 0;
       data.value.currency = newData.currency || "USD";
     }
   },
@@ -118,6 +137,7 @@ const saveCuenta = () => {
     account_type_id: data.value.account_type_id.value,
     balance: data.value.balance,
     currency: data.value.currency,
+    description: data.value.description,
   };
   if (props.cuentaData && props.cuentaData.accountId) {
     payload.accountId = props.cuentaData.accountId;

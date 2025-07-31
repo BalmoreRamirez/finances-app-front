@@ -24,35 +24,29 @@
     <!-- Resumen estadístico -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div class="bg-white p-4 rounded-lg shadow-md flex items-center">
-        <div
-          class="rounded-full bg-blue-100 p-3 flex items-center justify-center"
-        >
+        <div class="rounded-full bg-blue-100 p-3 flex items-center justify-center">
           <i class="pi pi-wallet text-xl text-blue-600"></i>
         </div>
         <div class="ml-4">
           <p class="text-sm text-gray-500">Total Invertido</p>
           <p class="text-xl font-bold text-gray-800">
-            {{ totalInvertido }}
+            {{ formatCurrency(totalInvertido) }}
           </p>
         </div>
       </div>
       <div class="bg-white p-4 rounded-lg shadow-md flex items-center">
-        <div
-          class="rounded-full bg-green-100 p-3 flex items-center justify-center"
-        >
+        <div class="rounded-full bg-green-100 p-3 flex items-center justify-center">
           <i class="pi pi-chart-line text-xl text-green-600"></i>
         </div>
         <div class="ml-4">
           <p class="text-sm text-gray-500">Ganancias Potenciales</p>
-          <p class="text-xl font-bold text-gray-800">
-            {{ totalGanancias }}
+          <p class="text-xl font-bold text-gray-800">{{ totalGanancias }}
+            {{ formatCurrency(totalEarnings) }}
           </p>
         </div>
       </div>
       <div class="bg-white p-4 rounded-lg shadow-md flex items-center">
-        <div
-          class="rounded-full bg-amber-100 p-3 flex items-center justify-center"
-        >
+        <div class="rounded-full bg-amber-100 p-3 flex items-center justify-center">
           <i class="pi pi-bolt text-xl text-amber-600"></i>
         </div>
         <div class="ml-4">
@@ -106,6 +100,11 @@
                 Tipo
               </th>
               <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+              >
+                Cuenta
+              </th>
+              <th
                 class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase"
               >
                 Monto Invertido
@@ -143,6 +142,11 @@
                 {{ getTipoLabel(inversion.investment_type?.name || "-") }}
               </td>
               <td
+                class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+              >
+                {{ inversion.account?.name || "No Asignada" }}
+              </td>
+              <td
                 class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-800"
               >
                 {{ formatCurrency(parseFloat(inversion.principal || 0)) }}
@@ -168,15 +172,15 @@
               >
                 <Button
                   v-if="
-                    (inversion.investment_type?.name || inversion.tipo) ===
-                    'credito'
+                    (inversion.investment_type?.name || inversion.tipo || '').toString().toLowerCase() === 'crédito' ||
+                    (inversion.investment_type?.name || inversion.tipo || '').toString().toLowerCase() === 'credito'
                   "
                   icon="pi pi-eye"
                   severity="info"
                   text
                   rounded
                   @click="verDetalleCredito(inversion)"
-                  v-tooltip.top="'Ver detalle del crédito'"
+                  v-tooltip.top="'Ver pagos del crédito'"
                 />
                 <Button
                   icon="pi pi-pencil"
@@ -244,7 +248,6 @@ const {
 const {
   investments,
   totalGanancias,
-  totalInvertidoActivo,
   investmentTypes,
   accountForSelect,
 } = storeToRefs(store);
@@ -270,13 +273,9 @@ onMounted(() => {
 // Computed
 const typesInvestmentList = computed(() => investmentTypes.value || []);
 const accountsList = computed(() => accountForSelect.value || []);
-const totalInvertido = computed(() => {
-  if (!investments.value) return 0;
-  return investments.value.reduce(
-    (sum, inv) => sum + (Number(inv.principal) || 0),
-    0
-  );
-});
+const totalInvertido = computed(() => store.totalInvested);
+const totalEarnings = computed(() => store.totalEarnings);
+const totalInvertidoActivo = computed(() => store.totalActiveInvested);
 
 // Filtros de tipo
 const tiposFiltro = [
@@ -287,7 +286,9 @@ const tiposFiltro = [
 
 // Helpers
 const formatCurrency = (value) => {
-  return value.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
+  const num = Number(value);
+  if (isNaN(num)) return "$0.00";
+  return num.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 };
 
 const getTipoLabel = (tipo) => {

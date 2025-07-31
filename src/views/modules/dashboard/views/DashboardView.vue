@@ -5,31 +5,34 @@
     import { storeToRefs } from 'pinia';
 
     const store = useFinanceStore();
-    const { ingresos, gastos, balanceGeneral } = storeToRefs(store);
+    // Fallback a array vacío si el getter no existe o es undefined
+    const { ingresos = ref([]), gastos = ref([]), balanceGeneral } = storeToRefs(store);
 
     const activeTab = ref('overview');
     const tabs = ['overview', 'income', 'expenses'];
 
 
+
     const totalIngresosMes = computed(() => {
-      if (!ingresos?.value) return 0;
+      const arr = ingresos?.value || [];
       const now = new Date();
-      return ingresos.value
+      return arr
         .filter(i => new Date(i.fecha).getMonth() === now.getMonth() && new Date(i.fecha).getFullYear() === now.getFullYear())
         .reduce((sum, i) => sum + i.monto, 0);
     });
 
     const totalGastosMes = computed(() => {
-      if (!gastos?.value) return 0;
+      const arr = gastos?.value || [];
       const now = new Date();
-      return gastos.value
+      return arr
         .filter(g => new Date(g.fecha).getMonth() === now.getMonth() && new Date(g.fecha).getFullYear() === now.getFullYear())
         .reduce((sum, g) => sum + g.monto, 0);
     });
 
     const incomeCategoryData = computed(() => {
-      if (!ingresos?.value) return { labels: [], data: [] };
-      const data = ingresos.value.reduce((acc, ingreso) => {
+      const arr = ingresos?.value || [];
+      if (!arr.length) return { labels: [], data: [] };
+      const data = arr.reduce((acc, ingreso) => {
         acc[ingreso.categoria] = (acc[ingreso.categoria] || 0) + ingreso.monto;
         return acc;
       }, {});
@@ -37,13 +40,15 @@
     });
 
     const expenseCategoryData = computed(() => {
-      if (!gastos?.value) return { labels: [], data: [] };
-      const data = gastos.value.reduce((acc, gasto) => {
+      const arr = gastos?.value || [];
+      if (!arr.length) return { labels: [], data: [] };
+      const data = arr.reduce((acc, gasto) => {
         acc[gasto.categoria] = (acc[gasto.categoria] || 0) + gasto.monto;
         return acc;
       }, {});
       return { labels: Object.keys(data), data: Object.values(data) };
     });
+
 
     const lineChartData = computed(() => {
       const labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -51,13 +56,13 @@
       const expensesByMonth = Array(12).fill(0);
       const currentYear = new Date().getFullYear();
 
-      ingresos.value.forEach(i => {
+      (ingresos?.value || []).forEach(i => {
         if (new Date(i.fecha).getFullYear() === currentYear) {
           const month = new Date(i.fecha).getMonth();
           incomeByMonth[month] += i.monto;
         }
       });
-      gastos.value.forEach(g => {
+      (gastos?.value || []).forEach(g => {
         if (new Date(g.fecha).getFullYear() === currentYear) {
           const month = new Date(g.fecha).getMonth();
           expensesByMonth[month] += g.monto;
