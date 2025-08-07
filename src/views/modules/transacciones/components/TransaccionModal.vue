@@ -11,7 +11,7 @@
         visible: Boolean,
         transaccionToEdit: Object,
         cuentas: Array,
-        categorias: Object // Prop para recibir las categorías
+        categorias: Array // Cambio: ahora recibe un array de categorías del backend
       });
 
       const emit = defineEmits(['update:visible', 'save']);
@@ -19,39 +19,54 @@
       const localTransaccion = ref({});
       const submitted = ref(false);
 
-      const tipos = ref([
-        {label: 'Ingreso', value: 'ingreso'},
-        {label: 'Gasto', value: 'gasto'}
-      ]);
-
       // Cuando el modal se abre, inicializa el formulario
       watch(() => props.visible, (isVisible) => {
         if (isVisible) {
           submitted.value = false;
           // Si se está editando, convierte la fecha a un objeto Date si es necesario
           if (props.transaccionToEdit) {
+              // Manejar la fecha correctamente
+              let fechaEdit = new Date();
+              if (props.transaccionToEdit.date) {
+                  fechaEdit = new Date(props.transaccionToEdit.date + 'T00:00:00');
+              } else if (props.transaccionToEdit.fecha) {
+                  fechaEdit = new Date(props.transaccionToEdit.fecha + 'T00:00:00');
+              }
+              
               localTransaccion.value = {
                   ...props.transaccionToEdit,
-                  fecha: new Date(props.transaccionToEdit.fecha + 'T00:00:00')
+                  fecha: fechaEdit,
+                  // Mapear campos del backend al frontend
+                  monto: Math.abs(parseFloat(props.transaccionToEdit.amount || props.transaccionToEdit.monto || 0)),
+                  descripcion: props.transaccionToEdit.description || props.transaccionToEdit.descripcion || '',
+                  cuentaId: parseInt(props.transaccionToEdit.account_id || props.transaccionToEdit.cuentaId),
+                  categoria: parseInt(props.transaccionToEdit.category_id || props.transaccionToEdit.categoria)
               };
           } else {
               // Valores por defecto para una nueva transacción
               localTransaccion.value = {
-                tipo: 'gasto',
                 fecha: new Date(),
                 monto: null,
                 descripcion: '',
                 categoria: null,
-                cuentaId: props.cuentas.length > 0 ? props.cuentas[0].id : null
+                cuentaId: cuentasDisponibles.value.length > 0 ? cuentasDisponibles.value[0].id : null
               };
           }
         }
       });
 
-      // Categorías a mostrar según el tipo seleccionado
+      // Categorías a mostrar (todas, ya que el backend maneja la lógica)
       const categoriasDisponibles = computed(() => {
-        if (!props.categorias || !localTransaccion.value.tipo) return [];
-        return props.categorias[localTransaccion.value.tipo] || [];
+        return props.categorias || [];
+      });
+
+      // Filtrar solo cuentas de efectivo y banco
+      const cuentasDisponibles = computed(() => {
+        if (!props.cuentas) return [];
+        return props.cuentas.filter(cuenta => {
+          const tipo = cuenta.name?.toLowerCase() || cuenta.tipo?.toLowerCase() || '';
+          return tipo.includes('efectivo') || tipo.includes('banco') || tipo.includes('cash') || tipo.includes('bank');
+        });
       });
 
       const closeModal = () => {
@@ -60,14 +75,66 @@
 
       const handleSave = () => {
         submitted.value = true;
-        if (!localTransaccion.value.monto || !localTransaccion.value.descripcion || !localTransaccion.value.cuentaId) {
+        if (!localTransaccion.value.monto || !localTransaccion.value.descripcion || !localTransaccion.value.cuentaId || !localTransaccion.value.categoria) {
           return;
         }
-        // Formatear fecha a YYYY-MM-DD antes de guardar
-        if (localTransaccion.value.fecha instanceof Date) {
-            localTransaccion.value.fecha = localTransaccion.value.fecha.toISOString().split('T')[0];
+        
+        // Validaciones adicionales
+        const monto = parseFloat(localTransaccion.value.monto);
+        const cuentaId = parseInt(localTransaccion.value.cuentaId);
+        const categoriaId = parseInt(localTransaccion.value.categoria);
+        
+        if (isNaN(monto) || monto <= 0) {
+          console.error('Monto inválido:', monto);
+          return;
         }
-        emit('save', localTransaccion.value);
+        
+        if (isNaN(cuentaId)) {
+          console.error('ID de cuenta inválido:', cuentaId);
+          return;
+        }
+        
+        if (isNaN(categoriaId)) {
+          console.error('ID de categoría inválido:', categoriaId);
+          return;
+        }
+        
+        // Formatear fecha a YYYY-MM-DD antes de guardar
+        let fechaFormateada = '';
+        if (localTransaccion.value.fecha instanceof Date) {
+            // Asegurar que la fecha sea válida
+            if (!isNaN(localTransaccion.value.fecha.getTime())) {
+                fechaFormateada = localTransaccion.value.fecha.toISOString().split('T')[0];
+            } else {
+                fechaFormateada = new Date().toISOString().split('T')[0];
+            }
+        } else if (localTransaccion.value.fecha) {
+            // Si ya es un string, verificar que tenga el formato correcto
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+            if (dateRegex.test(localTransaccion.value.fecha)) {
+                fechaFormateada = localTransaccion.value.fecha;
+            } else {
+                fechaFormateada = new Date().toISOString().split('T')[0];
+            }
+        } else {
+            // Si no hay fecha, usar la fecha actual
+            fechaFormateada = new Date().toISOString().split('T')[0];
+        }
+
+        // Crear el objeto con la estructura requerida por el backend
+        const transaccionData = {
+          account_id: cuentaId,
+          category_id: categoriaId,
+          amount: monto,
+          description: localTransaccion.value.descripcion.trim(),
+          date: fechaFormateada,
+          // Mantener id para edición
+          id: localTransaccion.value.id
+        };
+
+        console.log('Datos a enviar:', transaccionData); // Para debug
+
+        emit('save', transaccionData);
         closeModal();
       };
       </script>
@@ -75,17 +142,11 @@
       <template>
         <Dialog :visible="visible" @update:visible="closeModal" modal :header="transaccionToEdit ? 'Editar Transacción' : 'Nueva Transacción'" :style="{width: '500px'}" class="p-fluid">
           <div class="space-y-6 p-4">
-            <!-- Fila 1: Tipo y Cuenta -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label for="tipo" class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                <Dropdown id="tipo" v-model="localTransaccion.tipo" :options="tipos" optionLabel="label" optionValue="value"/>
-              </div>
-              <div>
-                <label for="cuenta" class="block text-sm font-medium text-gray-700 mb-1">Cuenta</label>
-                <Dropdown id="cuenta" v-model="localTransaccion.cuentaId" :options="cuentas" optionLabel="nombre" optionValue="id" placeholder="Selecciona una cuenta" :class="{'p-invalid': submitted && !localTransaccion.cuentaId}"/>
-                <small v-if="submitted && !localTransaccion.cuentaId" class="p-error">La cuenta es obligatoria.</small>
-              </div>
+            <!-- Fila 1: Cuenta -->
+            <div>
+              <label for="cuenta" class="block text-sm font-medium text-gray-700 mb-1">Cuenta</label>
+              <Dropdown id="cuenta" v-model="localTransaccion.cuentaId" :options="cuentasDisponibles" optionLabel="name" optionValue="id" placeholder="Selecciona una cuenta" :class="{'p-invalid': submitted && !localTransaccion.cuentaId}"/>
+              <small v-if="submitted && !localTransaccion.cuentaId" class="p-error">La cuenta es obligatoria.</small>
             </div>
 
             <!-- Fila 2: Descripción -->
@@ -99,7 +160,8 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label for="categoria" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                <Dropdown id="categoria" v-model="localTransaccion.categoria" :options="categoriasDisponibles" optionLabel="label" optionValue="value" placeholder="Selecciona una categoría"/>
+                <Dropdown id="categoria" v-model="localTransaccion.categoria" :options="categoriasDisponibles" optionLabel="name" optionValue="id" placeholder="Selecciona una categoría" :class="{'p-invalid': submitted && !localTransaccion.categoria}"/>
+                <small v-if="submitted && !localTransaccion.categoria" class="p-error">La categoría es obligatoria.</small>
               </div>
               <div>
                 <label for="monto" class="block text-sm font-medium text-gray-700 mb-1">Monto</label>

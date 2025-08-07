@@ -346,24 +346,30 @@ const openEditModal = (inversion) => {
 };
 
 const handleSaveInversion = async (inversionData) => {
-  let success = false;
-  const action = isEditMode.value ? "actualizada" : "creada";
+  let result = null;
   if (isEditMode.value) {
-    console.log("id de la inversión a actualizar:", inversionToEdit.value.id);
-    
-    success = await updateInvestment(inversionToEdit.value.id, inversionData);
+    result = await updateInvestment(inversionToEdit.value.id, inversionData);
   } else {
-    success = await addInvestment(inversionData);
+    result = await addInvestment(inversionData);
   }
-  toast.add({
-    severity: success ? "success" : "error",
-    summary: success ? "Éxito" : "Error",
-    detail: success
-      ? `Inversión ${action} correctamente.`
-      : `No se pudo guardar la inversión.`,
-    life: 3000,
-  });
-  showModal.value = false;
+  
+  if (result.success) {
+    toast.add({
+      severity: "success",
+      summary: "Éxito",
+      detail: result.message,
+      life: 3000,
+    });
+    showModal.value = false;
+    await fetchInvestments();
+  } else {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: result.error,
+      life: 5000,
+    });
+  }
 };
 
 const handleDeleteInversion = (id) => {
@@ -374,15 +380,22 @@ const handleDeleteInversion = (id) => {
     icon: "pi pi-exclamation-triangle",
     acceptClass: "p-button-danger",
     accept: async () => {
-      const success = await deleteInvestment(id);
-      toast.add({
-        severity: success ? "success" : "error",
-        summary: success ? "Éxito" : "Error",
-        detail: success
-          ? "Inversión eliminada."
-          : "No se pudo eliminar la inversión.",
-        life: 3000,
-      });
+      const result = await deleteInvestment(id);
+      if (result.success) {
+        toast.add({
+          severity: "success",
+          summary: "Éxito",
+          detail: result.message,
+          life: 3000,
+        });
+      } else {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: result.error,
+          life: 5000,
+        });
+      }
     },
   });
 };

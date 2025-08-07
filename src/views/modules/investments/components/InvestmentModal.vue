@@ -70,6 +70,18 @@
           class="w-full"
         />
       </div>
+
+      <!-- Campo de Estado (solo en modo edición) -->
+      <div v-if="props.isEditMode">
+        <Select
+          v-model="v$.status.$model"
+          :errors="v$.status.$errors"
+          :items="estadosInversion"
+          optionLabel="nombre"
+          placeholder="Estado de la Inversión*"
+          class="w-full"
+        />
+      </div>
     </div>
     <!-- Resumen de Cálculos (siempre visible) -->
     <div
@@ -159,10 +171,17 @@ const data = ref({
   account_id: null,
   start_date: null,
   end_date: null,
-  status: "",
+  status: "activa",
   notes: "",
   id: null,
 });
+
+// --- OPCIONES DE ESTADO ---
+const estadosInversion = ref([
+  { nombre: "Activa", value: "activa" },
+  { nombre: "Actualizada", value: "finalizada" },
+  { nombre: "Cancelada", value: "cancelada" },
+]);
 const submitted = ref(false);
 
 // --- VALIDACIONES ---
@@ -200,6 +219,9 @@ const rules = {
       required
     ),
   },
+  status: {
+    required: helpers.withMessage("El estado es obligatorio.", required),
+  },
   notes: {
     required: helpers.withMessage("Las notas son obligatorias.", required),
   },
@@ -236,7 +258,9 @@ watch(
       data.value.end_date = newData.end_date
         ? new Date(newData.end_date)
         : null;
-      data.value.status = newData.status ?? "";
+      data.value.status = estadosInversion.value.find(
+        (s) => s.value === (newData.status || "activa")
+      ) || estadosInversion.value[0];
       data.value.notes = newData.notes ?? "";
       //data.value.id = newData.id ?? null;
     } else {
@@ -247,7 +271,7 @@ watch(
       data.value.expected_return = 0;
       data.value.start_date = null;
       data.value.end_date = null;
-      data.value.status = "";
+      data.value.status = estadosInversion.value[0]; // Activa por defecto
       data.value.notes = "";
       //data.value.id = null;
     }
@@ -293,7 +317,7 @@ const saveInversion = () => {
     end_date: data.value.end_date
       ? data.value.end_date.toISOString().slice(0, 10)
       : null,
-    status: "activa", // Default status, can be changed later
+    status: data.value.status?.value ?? "activa",
     notes: data.value.notes,
     ...(data.value.id ? { id: data.value.id } : {}),
   });

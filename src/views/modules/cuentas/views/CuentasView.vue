@@ -150,21 +150,11 @@ const openEditModal = (cuenta) => {
 };
 
 const handleSaveCuenta = async (cuentaData) => {
-  let success = false;
   if (isEditMode.value) {
-    success = await updateCuenta(cuentaData);
+    await updateCuenta(cuentaData);
   } else {
-    success = await addCuenta(cuentaData);
+    await addCuenta(cuentaData);
   }
-
-  toast.add({
-    severity: success ? "success" : "error",
-    summary: success ? "Éxito" : "Error",
-    detail: success
-      ? `Cuenta ${isEditMode.value ? "actualizada" : "creada"} correctamente.`
-      : `No se pudo ${isEditMode.value ? "actualizar" : "crear"} la cuenta.`,
-    life: 3000,
-  });
   showModal.value = false;
 };
 
@@ -177,13 +167,7 @@ const handleDeleteCuenta = async (cuentaId) => {
     acceptLabel: "Sí, eliminar",
     rejectLabel: "Cancelar",
     accept: async () => {
-      const success = await deleteCuenta(cuentaId);
-      toast.add({
-        severity: success ? "success" : "error",
-        summary: success ? "Éxito" : "Error",
-        detail: success ? "Cuenta eliminada." : "No se pudo eliminar la cuenta.",
-        life: 3000,
-      });
+      await deleteCuenta(cuentaId);
     },
   });
 };

@@ -1,39 +1,68 @@
 <script setup>
     import { ref, onMounted, computed, watch } from 'vue';
     import Chart from 'chart.js/auto';
-    import { useFinanceStore } from '../../../../stores/financeStore.js';
+    import { useTransaccionesStore } from '../../../../stores/transactionStore.js';
+    import { useCuentasStore } from '../../../../stores/accountStore.js';
     import { storeToRefs } from 'pinia';
 
-    const store = useFinanceStore();
-    // Fallback a array vacío si el getter no existe o es undefined
-    const { ingresos = ref([]), gastos = ref([]), balanceGeneral } = storeToRefs(store);
+    const store = useTransaccionesStore();
+    const cuentasStore = useCuentasStore();
+    const { transacciones, ingresos, gastos, accounts, categories, isLoading } = storeToRefs(store);
+    const { capitalTotal, totalEfectivo, totalBanco } = storeToRefs(cuentasStore);
+    const { fetchTransactions, fetchAccounts, fetchCategories } = store;
+    const { fetchAccounts: fetchCuentas } = cuentasStore;
 
     const activeTab = ref('overview');
     const tabs = ['overview', 'income', 'expenses'];
 
-
+    // Cargar datos al montar
+    onMounted(async () => {
+      await Promise.all([
+        fetchTransactions(),
+        fetchAccounts(), 
+        fetchCategories(),
+        fetchCuentas()
+      ]);
+    });
 
     const totalIngresosMes = computed(() => {
       const arr = ingresos?.value || [];
       const now = new Date();
       return arr
-        .filter(i => new Date(i.fecha).getMonth() === now.getMonth() && new Date(i.fecha).getFullYear() === now.getFullYear())
-        .reduce((sum, i) => sum + i.monto, 0);
+        .filter(i => {
+          const fecha = new Date(i.date || i.fecha);
+          return fecha.getMonth() === now.getMonth() && fecha.getFullYear() === now.getFullYear();
+        })
+        .reduce((sum, i) => sum + parseFloat(i.amount || i.monto || 0), 0);
     });
 
     const totalGastosMes = computed(() => {
       const arr = gastos?.value || [];
       const now = new Date();
       return arr
-        .filter(g => new Date(g.fecha).getMonth() === now.getMonth() && new Date(g.fecha).getFullYear() === now.getFullYear())
-        .reduce((sum, g) => sum + g.monto, 0);
+        .filter(g => {
+          const fecha = new Date(g.date || g.fecha);
+          return fecha.getMonth() === now.getMonth() && fecha.getFullYear() === now.getFullYear();
+        })
+        .reduce((sum, g) => sum + parseFloat(g.amount || g.monto || 0), 0);
     });
+
+    const balanceGeneral = computed(() => {
+      // Capital total = suma de efectivo y banco
+      return capitalTotal.value || 0;
+    });
+
+    const getCategoryName = (categoryId) => {
+      const categoria = categories.value.find(c => c.id === categoryId);
+      return categoria?.name || 'Sin categoría';
+    };
 
     const incomeCategoryData = computed(() => {
       const arr = ingresos?.value || [];
       if (!arr.length) return { labels: [], data: [] };
       const data = arr.reduce((acc, ingreso) => {
-        acc[ingreso.categoria] = (acc[ingreso.categoria] || 0) + ingreso.monto;
+        const categoryName = getCategoryName(ingreso.category_id || ingreso.categoria);
+        acc[categoryName] = (acc[categoryName] || 0) + parseFloat(ingreso.amount || ingreso.monto || 0);
         return acc;
       }, {});
       return { labels: Object.keys(data), data: Object.values(data) };
@@ -43,7 +72,8 @@
       const arr = gastos?.value || [];
       if (!arr.length) return { labels: [], data: [] };
       const data = arr.reduce((acc, gasto) => {
-        acc[gasto.categoria] = (acc[gasto.categoria] || 0) + gasto.monto;
+        const categoryName = getCategoryName(gasto.category_id || gasto.categoria);
+        acc[categoryName] = (acc[categoryName] || 0) + parseFloat(gasto.amount || gasto.monto || 0);
         return acc;
       }, {});
       return { labels: Object.keys(data), data: Object.values(data) };
@@ -57,15 +87,18 @@
       const currentYear = new Date().getFullYear();
 
       (ingresos?.value || []).forEach(i => {
-        if (new Date(i.fecha).getFullYear() === currentYear) {
-          const month = new Date(i.fecha).getMonth();
-          incomeByMonth[month] += i.monto;
+        const fecha = new Date(i.date || i.fecha);
+        if (fecha.getFullYear() === currentYear) {
+          const month = fecha.getMonth();
+          incomeByMonth[month] += parseFloat(i.amount || i.monto || 0);
         }
       });
+      
       (gastos?.value || []).forEach(g => {
-        if (new Date(g.fecha).getFullYear() === currentYear) {
-          const month = new Date(g.fecha).getMonth();
-          expensesByMonth[month] += g.monto;
+        const fecha = new Date(g.date || g.fecha);
+        if (fecha.getFullYear() === currentYear) {
+          const month = fecha.getMonth();
+          expensesByMonth[month] += parseFloat(g.amount || g.monto || 0);
         }
       });
 
@@ -111,7 +144,7 @@
       }
     };
 
-    watch([() => store.ingresos, () => store.gastos, activeTab], () => {
+    watch([() => store.transactions, () => store.categories, activeTab], () => {
       setTimeout(createCharts, 50);
     }, { deep: true });
 

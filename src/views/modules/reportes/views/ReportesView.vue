@@ -1,12 +1,25 @@
 <script setup>
   import { ref, onMounted, computed, watch } from 'vue';
   import Chart from 'chart.js/auto';
-  import { useFinanceStore } from '../../../../stores/financeStore.js';
+  import { useTransaccionesStore } from '../../../../stores/transactionStore.js';
+  import { useCuentasStore } from '../../../../stores/accountStore.js';
   import { storeToRefs } from 'pinia';
 
-  const store = useFinanceStore();
-  // Fallback a array vacío si el getter no existe o es undefined
-  const { ingresos = ref([]), gastos = ref([]) } = storeToRefs(store);
+  const store = useTransaccionesStore();
+  const cuentasStore = useCuentasStore();
+  const { transacciones, ingresos, gastos, categories, isLoading } = storeToRefs(store);
+  const { capitalTotal, totalEfectivo, totalBanco, cuentas } = storeToRefs(cuentasStore);
+  const { fetchTransactions, fetchCategories } = store;
+  const { fetchAccounts } = cuentasStore;
+
+  // Cargar datos al montar
+  onMounted(async () => {
+    await Promise.all([
+      fetchTransactions(),
+      fetchCategories(),
+      fetchAccounts()
+    ]);
+  });
 
   // --- DATOS COMPUTADOS PARA REPORTES ---
 
@@ -21,20 +34,40 @@
     const ingresosArr = ingresos?.value || [];
     const gastosArr = gastos?.value || [];
 
-    // Calcular balance inicial de años anteriores
-    let cumulativeBalance = [...ingresosArr, ...gastosArr]
-      .filter(t => new Date(t.fecha).getFullYear() < currentYear)
-      .reduce((acc, t) => acc + (t.monto * (t.categoria ? -1 : 1)), 0);
+    // Capital inicial: suma de cuentas de efectivo y banco
+    const capitalInicial = capitalTotal.value || 0;
+
+    // Calcular balance inicial de años anteriores (movimientos de transacciones)
+    let cumulativeTransactionBalance = [...ingresosArr, ...gastosArr]
+      .filter(t => {
+        const fecha = new Date(t.date || t.fecha);
+        return fecha.getFullYear() < currentYear;
+      })
+      .reduce((acc, t) => {
+        const amount = parseFloat(t.amount || t.monto || 0);
+        const categoria = categories.value.find(c => c.id === t.category_id);
+        const esIngreso = categoria?.type === 'ingreso';
+        return acc + (esIngreso ? amount : -amount);
+      }, 0);
+
+    // Balance inicial total = capital de cuentas + movimientos de años anteriores
+    let cumulativeBalance = capitalInicial;
 
     // Procesar datos del año actual
     labels.forEach((_, monthIndex) => {
       const monthlyIncome = ingresosArr
-        .filter(i => new Date(i.fecha).getFullYear() === currentYear && new Date(i.fecha).getMonth() === monthIndex)
-        .reduce((sum, i) => sum + i.monto, 0);
+        .filter(i => {
+          const fecha = new Date(i.date || i.fecha);
+          return fecha.getFullYear() === currentYear && fecha.getMonth() === monthIndex;
+        })
+        .reduce((sum, i) => sum + parseFloat(i.amount || i.monto || 0), 0);
 
       const monthlyExpenses = gastosArr
-        .filter(g => new Date(g.fecha).getFullYear() === currentYear && new Date(g.fecha).getMonth() === monthIndex)
-        .reduce((sum, g) => sum + g.monto, 0);
+        .filter(g => {
+          const fecha = new Date(g.date || g.fecha);
+          return fecha.getFullYear() === currentYear && fecha.getMonth() === monthIndex;
+        })
+        .reduce((sum, g) => sum + parseFloat(g.amount || g.monto || 0), 0);
 
       incomeByMonth[monthIndex] = monthlyIncome;
       expensesByMonth[monthIndex] = monthlyExpenses;
@@ -83,7 +116,7 @@
     }
   };
 
-  watch(reportData, createCharts, { deep: true });
+  watch([() => store.transactions, () => store.categories, () => cuentasStore.cuentas, reportData], createCharts, { deep: true });
   onMounted(createCharts);
 
   const formatCurrency = (value) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
@@ -97,6 +130,25 @@
       </header>
 
       <div class="container mx-auto px-4 py-8">
+        <!-- Resumen de Capital -->
+        <div class="mb-6 bg-background-light rounded-lg shadow p-6">
+          <h2 class="text-xl font-bold mb-4 text-finance-700">Capital Total</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="text-center">
+              <p class="text-sm text-neutral-600">Efectivo</p>
+              <p class="text-2xl font-bold text-green-600">{{ formatCurrency(totalEfectivo) }}</p>
+            </div>
+            <div class="text-center">
+              <p class="text-sm text-neutral-600">Banco</p>
+              <p class="text-2xl font-bold text-blue-600">{{ formatCurrency(totalBanco) }}</p>
+            </div>
+            <div class="text-center">
+              <p class="text-sm text-neutral-600">Capital Total</p>
+              <p class="text-3xl font-bold text-finance-700">{{ formatCurrency(capitalTotal) }}</p>
+            </div>
+          </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div class="bg-background-light rounded-lg shadow p-6">
             <h2 class="text-xl font-bold mb-4 text-finance-700">Evolución del Capital</h2>
@@ -125,13 +177,12 @@
               </tr>
               </thead>
               <tbody class="bg-white divide-y divide-neutral-200">
-              <!-- CORRECCIÓN: Usar reportData en lugar de cashFlowData -->
               <tr v-for="(label, index) in reportData.labels" :key="index">
                 <td class="px-6 py-4 font-medium text-neutral-900">{{ label }}</td>
                 <td class="px-6 py-4 text-green-600">{{ formatCurrency(reportData.incomeByMonth[index]) }}</td>
                 <td class="px-6 py-4 text-red-600">{{ formatCurrency(reportData.expensesByMonth[index]) }}</td>
-                <td class="px-6 py-4 font-medium" :class="reportData.balanceByMonth[index] >= 0 ? 'text-finance-500' : 'text-accent-700'">
-                  {{ formatCurrency(reportData.balanceByMonth[index]) }}
+                <td class="px-6 py-4 font-medium" :class="(reportData.incomeByMonth[index] - reportData.expensesByMonth[index]) >= 0 ? 'text-finance-500' : 'text-accent-700'">
+                  {{ formatCurrency(reportData.incomeByMonth[index] - reportData.expensesByMonth[index]) }}
                 </td>
               </tr>
               </tbody>

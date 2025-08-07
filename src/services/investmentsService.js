@@ -21,6 +21,12 @@ const investmentsService = {
     },
     getInvestmentById: (id) => {
         return api.get(`/investments/${id}`);
+    },
+    addPayment: (investmentId, paymentData) => {
+        return api.post(`/investment-credit-payments/${investmentId}`, paymentData);
+    },
+    deletePayment: (investmentId, paymentId) => {
+        return api.delete(`/investment-credit-payments/${investmentId}/${paymentId}`);
     }
 
 };
