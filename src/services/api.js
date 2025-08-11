@@ -2,8 +2,13 @@
 import axios from 'axios';
 
 const PORT = import.meta.env.VITE_API_PORT || 3000;
+const isDevelopment = import.meta.env.MODE === 'development';
+const baseURL = isDevelopment 
+    ? `http://localhost:${PORT}`
+    : 'https://finances-app-back.onrender.com';
+
 const apiClient = axios.create({
-    baseURL: `http://localhost:${PORT}`,
+    baseURL,
     headers: {
         'Content-Type': 'application/json'
     }
