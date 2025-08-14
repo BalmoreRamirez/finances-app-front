@@ -117,6 +117,11 @@
               <th
                 class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
               >
+                Total Pagado
+              </th>
+              <th
+                class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
+              >
                 Estado
               </th>
               <th
@@ -155,6 +160,12 @@
                 class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600"
               >
                 $ {{ inversion.expected_return|| 0 }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                <span v-if="esTipoCredito(inversion)" class="font-medium text-green-600">
+                  {{ formatCurrency(getTotalPagado(inversion)) }}
+                </span>
+                <span v-else class="text-gray-400">-</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
                 <Tag
@@ -226,6 +237,7 @@ import { storeToRefs } from "pinia";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { useFinanceStore } from "../../../../stores/financeStore.js";
+import { useInversionesStore } from "../../../../stores/investmentStore.js";
 import Button from "primevue/button";
 import ConfirmDialog from "primevue/confirmdialog";
 import Dropdown from "primevue/dropdown";
@@ -236,6 +248,7 @@ import Toast from "primevue/toast";
 
 // Stores y referencias
 const store = useFinanceStore();
+const investmentStore = useInversionesStore();
 const {
   deleteInvestment,
   addInvestment,
@@ -262,12 +275,16 @@ const showModal = ref(false);
 const isEditMode = ref(false);
 const inversionToEdit = ref(null);
 const filtroTipo = ref("todos");
+const pagosPorInversion = ref({});
 
 // Ciclo de vida
-onMounted(() => {
-  if (investments.value.length === 0) fetchInvestments();
+onMounted(async () => {
+  if (investments.value.length === 0) await fetchInvestments();
   if (investmentTypes.value.length === 0) fetchInvestmentTypes();
   if (accountForSelect.value.length === 0) fetchAccountsForSelect();
+  
+  // Cargar pagos para inversiones tipo crédito
+  await cargarPagosCreditos();
 });
 
 // Computed
@@ -296,6 +313,38 @@ const getTipoLabel = (tipo) => {
   if (typeof tipo === "string")
     return tipo.charAt(0).toUpperCase() + tipo.slice(1);
   return tipo.nombre || tipo.label || "-";
+};
+
+// Función para verificar si es tipo crédito
+const esTipoCredito = (inversion) => {
+  const tipo = (inversion.investment_type?.name || inversion.tipo || '').toString().toLowerCase();
+  return tipo === 'crédito' || tipo === 'credito';
+};
+
+// Función para cargar pagos de todas las inversiones tipo crédito
+const cargarPagosCreditos = async () => {
+  const inversionesCredito = investments.value.filter(inv => esTipoCredito(inv));
+  
+  for (const inversion of inversionesCredito) {
+    try {
+      const result = await investmentStore.fetchPaymentsByInvestment(inversion.id);
+      if (result.success) {
+        pagosPorInversion.value[inversion.id] = investmentStore.payments || [];
+      }
+    } catch (error) {
+      console.error(`Error al cargar pagos para inversión ${inversion.id}:`, error);
+      pagosPorInversion.value[inversion.id] = [];
+    }
+  }
+};
+
+// Función para obtener el total pagado (suma de montos de cuotas)
+const getTotalPagado = (inversion) => {
+  const pagos = pagosPorInversion.value[inversion.id] || [];
+  return pagos.reduce((total, pago) => {
+    const monto = parseFloat(pago.amount || pago.monto || 0);
+    return total + monto;
+  }, 0);
 };
 
 const getEstadoTag = (status) => {
@@ -362,6 +411,8 @@ const handleSaveInversion = async (inversionData) => {
     });
     showModal.value = false;
     await fetchInvestments();
+    // Recargar pagos después de actualizar inversiones
+    await cargarPagosCreditos();
   } else {
     toast.add({
       severity: "error",
