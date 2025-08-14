@@ -15,13 +15,7 @@ export default defineConfig({
   build: {
     // Optimizaciones de build
     target: 'esnext',
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
+    minify: 'esbuild', // Usar esbuild en lugar de terser para mayor compatibilidad
     rollupOptions: {
       output: {
         // Separar chunks para mejor caching
@@ -46,7 +40,7 @@ export default defineConfig({
     },
     // Aumentar el límite de chunk size
     chunkSizeWarningLimit: 1000,
-    // Habilitar compresión
+    // Deshabilitar sourcemap para build más rápido
     sourcemap: false
   },
   optimizeDeps: {
