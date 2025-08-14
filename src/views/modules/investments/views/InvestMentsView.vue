@@ -370,6 +370,20 @@ const getEstadoTag = (status) => {
 
 // Acciones
 const openCreateModal = () => {
+  // Función helper para formatear fecha local
+  const formatearFechaLocal = (fecha) => {
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()+1).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  // Obtener fecha actual
+  const fechaActual = new Date();
+  // Calcular fecha de vencimiento (15 días adelante)
+  const fechaVencimiento = new Date();
+  fechaVencimiento.setDate(fechaActual.getDate() + 15);
+  
   isEditMode.value = false;
   inversionToEdit.value = {
     investment_type_id: "",
@@ -377,8 +391,8 @@ const openCreateModal = () => {
     principal: 0,
     expected_return: 0,
     account_id: "",
-    start_date: null,
-    end_date: null,
+    start_date: formatearFechaLocal(fechaActual),
+    end_date: formatearFechaLocal(fechaVencimiento),
     status: "",
     notes: "",
   };
