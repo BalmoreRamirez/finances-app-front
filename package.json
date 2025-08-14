@@ -6,11 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:prod": "vite build --mode production",
+    "build:prod": "MODE=production vite build",
     "preview": "vite preview",
     "analyze": "npx vite-bundle-analyzer dist",
-    "clean": "rm -rf dist node_modules/.vite",
-    "optimize": "npm run clean && npm install && npm run build:prod"
+    "clean": "rm -rf dist node_modules/.vite"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.17",

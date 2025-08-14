@@ -25,11 +25,22 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Separar chunks para mejor caching
-        manualChunks: {
-          vendor: ['vue', 'vue-router', 'pinia'],
-          ui: ['primevue'],
-          charts: ['chart.js'],
-          utils: ['axios', 'dayjs', 'crypto-js']
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('vue') || id.includes('router') || id.includes('pinia')) {
+              return 'vendor';
+            }
+            if (id.includes('primevue') || id.includes('primeicons')) {
+              return 'ui';
+            }
+            if (id.includes('chart.js')) {
+              return 'charts';
+            }
+            if (id.includes('axios') || id.includes('dayjs') || id.includes('crypto-js')) {
+              return 'utils';
+            }
+            return 'vendor';
+          }
         }
       }
     },
@@ -40,7 +51,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['vue', 'vue-router', 'pinia', 'axios'],
-    exclude: ['primevue']
+    exclude: []
   }
 })
 
