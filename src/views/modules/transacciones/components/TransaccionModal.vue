@@ -69,6 +69,45 @@
         });
       });
 
+      // Función para formatear moneda
+      const formatCurrency = (value) => {
+        return new Intl.NumberFormat('es-MX', {
+          style: 'currency',
+          currency: 'MXN'
+        }).format(value || 0);
+      };
+
+      // Función para obtener el saldo disponible de la cuenta seleccionada
+      const getSaldoDisponible = () => {
+        if (!localTransaccion.value.cuentaId) return 0;
+        const cuenta = props.cuentas?.find(c => c.id === localTransaccion.value.cuentaId);
+        return cuenta?.balance || 0;
+      };
+
+      // Función para obtener el nombre de la cuenta seleccionada
+      const getNombreCuentaSeleccionada = () => {
+        if (!localTransaccion.value.cuentaId) return '';
+        const cuenta = props.cuentas?.find(c => c.id === localTransaccion.value.cuentaId);
+        return cuenta?.name || '';
+      };
+
+      // Función para verificar si el monto excede el saldo disponible
+      const isMontoExcedeSaldo = () => {
+        if (!localTransaccion.value.monto || !localTransaccion.value.categoria || !localTransaccion.value.cuentaId) {
+          return false;
+        }
+        
+        const categoria = props.categorias?.find(c => c.id === localTransaccion.value.categoria);
+        const esGasto = categoria?.type === 'gasto' || categoria?.tipo === 'gasto';
+        
+        if (!esGasto) return false;
+        
+        const monto = parseFloat(localTransaccion.value.monto);
+        const saldoDisponible = getSaldoDisponible();
+        
+        return monto > saldoDisponible;
+      };
+
       const closeModal = () => {
         emit('update:visible', false);
       };
@@ -96,6 +135,12 @@
         
         if (isNaN(categoriaId)) {
           console.error('ID de categoría inválido:', categoriaId);
+          return;
+        }
+
+        // Validar que el monto no exceda el saldo disponible para gastos
+        if (isMontoExcedeSaldo()) {
+          console.error('El monto excede el saldo disponible');
           return;
         }
         
@@ -142,6 +187,20 @@
       <template>
         <Dialog :visible="visible" @update:visible="closeModal" modal :header="transaccionToEdit ? 'Editar Transacción' : 'Nueva Transacción'" :style="{width: '500px'}" class="p-fluid">
           <div class="space-y-6 p-4">
+            <!-- Card de saldo disponible -->
+            <div v-if="localTransaccion.cuentaId" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                  <i class="pi pi-wallet text-blue-600 mr-2"></i>
+                  <span class="text-sm font-medium text-blue-800">{{ getNombreCuentaSeleccionada() }}</span>
+                </div>
+                <div class="text-right">
+                  <span class="text-sm text-blue-600">Saldo disponible:</span>
+                  <div class="text-lg font-bold text-blue-800">{{ formatCurrency(getSaldoDisponible()) }}</div>
+                </div>
+              </div>
+            </div>
+
             <!-- Fila 1: Cuenta -->
             <div>
               <label for="cuenta" class="block text-sm font-medium text-gray-700 mb-1">Cuenta</label>
@@ -165,8 +224,11 @@
               </div>
               <div>
                 <label for="monto" class="block text-sm font-medium text-gray-700 mb-1">Monto</label>
-                <InputNumber id="monto" v-model="localTransaccion.monto" mode="currency" currency="MXN" locale="es-MX" :class="{'p-invalid': submitted && !localTransaccion.monto}"/>
+                <InputNumber id="monto" v-model="localTransaccion.monto" mode="currency" currency="MXN" locale="es-MX" :class="{'p-invalid': submitted && (!localTransaccion.monto || isMontoExcedeSaldo())}"/>
                 <small v-if="submitted && !localTransaccion.monto" class="p-error">El monto es obligatorio.</small>
+                <small v-if="submitted && isMontoExcedeSaldo()" class="p-error">
+                  El monto excede el saldo disponible ({{ formatCurrency(getSaldoDisponible()) }})
+                </small>
               </div>
             </div>
 

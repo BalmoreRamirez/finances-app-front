@@ -12,6 +12,32 @@
       />
     </div>
 
+    <!-- Cards de cuentas con saldos -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div 
+        v-for="cuenta in cuentasEfectivoYBanco" 
+        :key="cuenta.id"
+        class="bg-white rounded-lg shadow-md p-4 border-l-4"
+        :class="getSaldoColor(cuenta.balance)"
+      >
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <i :class="getIconoCuenta(cuenta)" class="mr-3 text-xl"></i>
+            <div>
+              <h3 class="text-sm font-medium text-gray-700">{{ cuenta.name }}</h3>
+              <p class="text-xs text-gray-500">{{ getTipoCuenta(cuenta) }}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-lg font-bold" :class="getSaldoTextColor(cuenta.balance)">
+              {{ formatCurrency(cuenta.balance || 0) }}
+            </div>
+            <p class="text-xs text-gray-500">Disponible</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="bg-background-light rounded-lg shadow-md overflow-hidden">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-neutral-100">
@@ -181,5 +207,54 @@ const handleSave = async (data) => {
       life: 5000
     });
   }
+};
+
+// Computed para filtrar cuentas de efectivo y banco
+const cuentasEfectivoYBanco = computed(() => {
+  if (!accounts.value) return [];
+  return accounts.value.filter(cuenta => {
+    const tipo = cuenta.name?.toLowerCase() || cuenta.tipo?.toLowerCase() || '';
+    return tipo.includes('efectivo') || tipo.includes('banco') || tipo.includes('cash') || tipo.includes('bank');
+  });
+});
+
+// Función para obtener el color del borde según el saldo
+const getSaldoColor = (saldo) => {
+  const balance = parseFloat(saldo || 0);
+  if (balance > 1000) return 'border-green-500';
+  if (balance > 0) return 'border-yellow-500';
+  return 'border-red-500';
+};
+
+// Función para obtener el color del texto del saldo
+const getSaldoTextColor = (saldo) => {
+  const balance = parseFloat(saldo || 0);
+  if (balance > 1000) return 'text-green-600';
+  if (balance > 0) return 'text-yellow-600';
+  return 'text-red-600';
+};
+
+// Función para obtener el ícono según el tipo de cuenta
+const getIconoCuenta = (cuenta) => {
+  const tipo = cuenta.name?.toLowerCase() || cuenta.tipo?.toLowerCase() || '';
+  if (tipo.includes('efectivo') || tipo.includes('cash')) {
+    return 'pi pi-money-bill text-green-600';
+  }
+  if (tipo.includes('banco') || tipo.includes('bank')) {
+    return 'pi pi-building text-blue-600';
+  }
+  return 'pi pi-wallet text-gray-600';
+};
+
+// Función para obtener el tipo de cuenta legible
+const getTipoCuenta = (cuenta) => {
+  const tipo = cuenta.name?.toLowerCase() || cuenta.tipo?.toLowerCase() || '';
+  if (tipo.includes('efectivo') || tipo.includes('cash')) {
+    return 'Efectivo';
+  }
+  if (tipo.includes('banco') || tipo.includes('bank')) {
+    return 'Banco';
+  }
+  return 'Cuenta';
 };
 </script>
