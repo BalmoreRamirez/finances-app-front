@@ -11,7 +11,7 @@ const apiClient = axios.create({
     headers: {
         'Content-Type': 'application/json'
     },
-    timeout: 30000, // 30 segundos timeout
+    timeout: 60000, // 60 segundos timeout (aumentado para Render)
 });
 
 // Cache simple para peticiones GET
@@ -54,5 +54,45 @@ apiClient.interceptors.response.use(response => {
 }, error => {
     return Promise.reject(error);
 });
+
+// Función de retry para peticiones fallidas
+const retryRequest = async (originalRequest, retryCount = 0) => {
+    const maxRetries = 3;
+    const retryDelay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+    
+    if (retryCount >= maxRetries) {
+        throw originalRequest;
+    }
+    
+    console.log(`Reintentando petición (intento ${retryCount + 1}/${maxRetries})...`);
+    
+    // Esperar antes del retry
+    await new Promise(resolve => setTimeout(resolve, retryDelay));
+    
+    try {
+        const response = await apiClient(originalRequest.config);
+        return response;
+    } catch (error) {
+        return retryRequest(error, retryCount + 1);
+    }
+};
+
+// Función helper para hacer peticiones con retry automático
+export const apiRequest = async (config) => {
+    try {
+        const response = await apiClient(config);
+        return response;
+    } catch (error) {
+        // Solo hacer retry en errores de timeout o conectividad
+        if (error.code === 'ECONNABORTED' || 
+            error.code === 'NETWORK_ERROR' || 
+            error.response?.status >= 500) {
+            console.warn('Error de conectividad detectado, intentando retry...', error.message);
+            return retryRequest(error);
+        }
+        // Para otros errores, fallar inmediatamente
+        throw error;
+    }
+};
 
 export default apiClient;
