@@ -290,7 +290,12 @@ onMounted(async () => {
 // Computed
 const typesInvestmentList = computed(() => investmentTypes.value || []);
 const accountsList = computed(() => accountForSelect.value || []);
-const totalInvertido = computed(() => store.totalInvested);
+const totalInvertido = computed(() => {
+  // Sumar solo las inversiones activas
+  return (investments.value || [])
+    .filter(inv => inv.status === 'activa' || inv.estado === 'activa')
+    .reduce((sum, inv) => sum + parseFloat(inv.principal || 0), 0);
+});
 const totalEarnings = computed(() => store.totalEarnings);
 const totalInvertidoActivo = computed(() => store.totalActiveInvested);
 
