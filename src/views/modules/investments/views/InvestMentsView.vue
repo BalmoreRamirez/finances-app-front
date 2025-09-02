@@ -40,8 +40,19 @@
         </div>
         <div class="ml-4">
           <p class="text-sm text-gray-500">Ganancias Potenciales</p>
-          <p class="text-xl font-bold text-gray-800">{{ totalGanancias }}
-            {{ formatCurrency(totalEarnings) }}
+          <p class="text-xl font-bold text-gray-800">
+            {{ formatCurrency(totalGananciasPotenciales) }}
+          </p>
+        </div>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow-md flex items-center">
+        <div class="rounded-full bg-purple-100 p-3 flex items-center justify-center">
+          <i class="pi pi-check-circle text-xl text-purple-600"></i>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm text-gray-500">Ganancias Acumuladas</p>
+          <p class="text-xl font-bold text-gray-800">
+            {{ formatCurrency(totalGananciasAcumuladas) }}
           </p>
         </div>
       </div>
@@ -298,6 +309,19 @@ const totalInvertido = computed(() => {
 });
 const totalEarnings = computed(() => store.totalEarnings);
 const totalInvertidoActivo = computed(() => store.totalActiveInvested);
+const totalGananciasPotenciales = computed(() => {
+  // Sumar solo las ganancias de inversiones activas
+  return (investments.value || [])
+    .filter(inv => inv.status === 'activa' || inv.estado === 'activa')
+    .reduce((sum, inv) => sum + parseFloat(inv.expected_return || 0), 0);
+});
+
+const totalGananciasAcumuladas = computed(() => {
+  // Sumar solo las ganancias de inversiones finalizadas/completadas/pagadas
+  return (investments.value || [])
+    .filter(inv => ['finalizada', 'completado', 'pagado'].includes(inv.status) || ['finalizada', 'completado', 'pagado'].includes(inv.estado))
+    .reduce((sum, inv) => sum + parseFloat(inv.expected_return || 0), 0);
+});
 
 // Filtros de tipo
 const tiposFiltro = [

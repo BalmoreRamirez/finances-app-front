@@ -42,7 +42,10 @@ export const useFinanceStore = defineStore("finance", {
       ),
     totalActiveInvested: () => {
       const investments = useInvestmentsStore().investments || [];
-      return investments.length;
+      const activeInvestments = investments.filter(
+        (inv) => inv.status === 'activa' || inv.estado === 'activa'
+      );
+      return activeInvestments.length;
     },
   },
   actions: {
