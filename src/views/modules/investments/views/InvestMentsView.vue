@@ -58,21 +58,17 @@
       </div>
     </div>
 
+
     <!-- Filtros -->
-    <div class="flex justify-end">
+    <div class="flex flex-col md:flex-row justify-end gap-4 mb-4">
       <div class="w-full md:w-72">
-        <label
-          for="filtro-tipo"
-          class="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Filtrar por tipo:
-        </label>
+        <label for="filtro-estado" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por estado:</label>
         <Dropdown
-          v-model="filtroTipo"
-          :options="tiposFiltro"
+          v-model="filtroEstado"
+          :options="estadosFiltro"
           optionLabel="label"
           optionValue="value"
-          placeholder="Seleccionar tipo"
+          placeholder="Seleccionar estado"
           class="w-full"
         />
       </div>
@@ -127,7 +123,7 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="(inversion, idx) in investments" :key="inversion.id">
+            <tr v-for="(inversion, idx) in filteredInvestments" :key="inversion.id">
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {{ idx + 1 }}
               </td>
@@ -261,13 +257,102 @@ const toast = useToast();
 const showModal = ref(false);
 const isEditMode = ref(false);
 const inversionToEdit = ref(null);
-const filtroTipo = ref("todos");
+const filtroEstado = ref("activa"); // Por defecto solo "activa"
+// Filtros de estado
+const estadosFiltro = [
+  { label: "Activa", value: "activa" },
+  { label: "Finalizada", value: "finalizada" },
+  { label: "Todas", value: "todas" },
+];
+// Computed para filtrar inversiones por estado
+const filteredInvestments = computed(() => {
+  let arr = investments.value;
+  
+  // Filtrar por estado
+  if (filtroEstado.value !== "todas") {
+    arr = arr.filter(inv => {
+      const estado = (inv.status || inv.estado || "").toLowerCase();
+      return estado === filtroEstado.value;
+    });
+  }
+  
+  return arr;
+});
 
 // Ciclo de vida
-onMounted(() => {
-  if (investments.value.length === 0) fetchInvestments();
-  if (investmentTypes.value.length === 0) fetchInvestmentTypes();
-  if (accountForSelect.value.length === 0) fetchAccountsForSelect();
+onMounted(async () => {
+  try {
+    // Verificar si hay token de autenticación
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      toast.add({
+        severity: "error",
+        summary: "Error de autenticación",
+        detail: "No estás autenticado. Inicia sesión nuevamente.",
+        life: 5000,
+      });
+      router.push('/login');
+      return;
+    }
+
+    if (investments.value.length === 0) {
+      try {
+        const result = await fetchInvestments();
+        // Verificar si el resultado tiene la propiedad success
+        if (result && result.success === false) {
+          // Si es error 403, redirigir al login
+          if (result.error?.includes("403") || result.error?.includes("Acceso denegado")) {
+            localStorage.removeItem('accessToken');
+            router.push('/login');
+            return;
+          }
+          toast.add({
+            severity: "error",
+            summary: "Error de carga",
+            detail: result.error || "No se pudieron cargar las inversiones",
+            life: 5000,
+          });
+        }
+      } catch (error) {
+        console.error("Error específico al cargar inversiones:", error);
+        if (error.response?.status === 403) {
+          localStorage.removeItem('accessToken');
+          router.push('/login');
+          return;
+        }
+      }
+    }
+
+    if (investmentTypes.value.length === 0) {
+      try {
+        const result = await fetchInvestmentTypes();
+        if (result && result.success === false) {
+          console.warn("No se pudieron cargar los tipos de inversión:", result.error);
+        }
+      } catch (error) {
+        console.warn("Error al cargar tipos de inversión:", error);
+      }
+    }
+
+    if (accountForSelect.value.length === 0) {
+      try {
+        const result = await fetchAccountsForSelect();
+        if (result && result.success === false) {
+          console.warn("No se pudieron cargar las cuentas:", result.error);
+        }
+      } catch (error) {
+        console.warn("Error al cargar cuentas:", error);
+      }
+    }
+  } catch (error) {
+    console.error("Error al cargar datos iniciales:", error);
+    toast.add({
+      severity: "error",
+      summary: "Error de autenticación",
+      detail: "Verifica tu sesión e intenta nuevamente",
+      life: 5000,
+    });
+  }
 });
 
 // Computed
@@ -276,13 +361,6 @@ const accountsList = computed(() => accountForSelect.value || []);
 const totalInvertido = computed(() => store.totalInvested);
 const totalEarnings = computed(() => store.totalEarnings);
 const totalInvertidoActivo = computed(() => store.totalActiveInvested);
-
-// Filtros de tipo
-const tiposFiltro = [
-  { label: "Todos", value: "todos" },
-  { label: "Compra", value: "compra" },
-  { label: "Crédito", value: "credito" },
-];
 
 // Helpers
 const formatCurrency = (value) => {
@@ -300,6 +378,10 @@ const getTipoLabel = (tipo) => {
 
 const getEstadoTag = (status) => {
   switch (status) {
+    case "activa":
+      return { severity: "info", text: "Activa" };
+    case "finalizada":
+      return { severity: "success", text: "Finalizada" };
     case "activo":
       return { severity: "info", text: "Activo" };
     case "completado":

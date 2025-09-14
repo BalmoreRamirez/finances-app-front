@@ -54,20 +54,30 @@ export const useCuentasStore = defineStore("cuentas", {
           nombre: account.name,
           value: account.id,
         }));
+        return { success: true };
       } catch (error) {
         const notifications = this._initNotifications();
         notifications.handleBackendError(error, "Error al obtener cuentas");
         console.error("Error al obtener cuentas:", error);
+        return { 
+          success: false, 
+          error: error.response?.data?.message || "Error al obtener cuentas"
+        };
       }
     },
     async fetchAccounts() {
       try {
         const response = await cuentasService.getAccounts();
         this.cuentas = response.data;
+        return { success: true };
       } catch (error) {
         const notifications = this._initNotifications();
         notifications.handleBackendError(error, "Error al obtener cuentas");
         console.error("Error al obtener cuentas:", error);
+        return { 
+          success: false, 
+          error: error.response?.data?.message || "Error al obtener cuentas"
+        };
       }
     },
 
@@ -78,10 +88,15 @@ export const useCuentasStore = defineStore("cuentas", {
           nombre: type.name,
           value: type.id,
         }));
+        return { success: true };
       } catch (error) {
         const notifications = this._initNotifications();
         notifications.handleBackendError(error, "Error al obtener tipos de cuenta");
         console.error("Error al obtener tipos de cuenta:", error);
+        return { 
+          success: false, 
+          error: error.response?.data?.message || "Error al obtener tipos de cuenta"
+        };
       }
     },
 
