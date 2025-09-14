@@ -282,6 +282,7 @@ const showModal = ref(false);
 const isEditMode = ref(false);
 const inversionToEdit = ref(null);
 const filtroEstado = ref("activa"); // Por defecto solo "activa"
+const pagosPorInversion = ref({}); // Para almacenar pagos por inversión
 // Filtros de estado
 const estadosFiltro = [
   { label: "Activa", value: "activa" },
@@ -368,6 +369,9 @@ onMounted(async () => {
         console.warn("Error al cargar cuentas:", error);
       }
     }
+    
+    // Cargar pagos de créditos después de cargar las inversiones
+    await cargarPagosCreditos();
   } catch (error) {
     console.error("Error al cargar datos iniciales:", error);
     toast.add({

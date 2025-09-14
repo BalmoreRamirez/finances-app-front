@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const isDevelopment = import.meta.env.MODE === 'development';
 const baseURL = isDevelopment 
-    ? 'http://localhost:3000/'
+    ? 'http://localhost:3006/'
     : 'https://finances-app-back.onrender.com';
 
 const apiClient = axios.create({
