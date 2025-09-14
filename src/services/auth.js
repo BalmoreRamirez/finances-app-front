@@ -1,9 +1,13 @@
 // src/services/auth.js
 import axios from 'axios';
 
-const PORT = import.meta.env.VITE_API_PORT || 3000;
+const isDevelopment = import.meta.env.MODE === 'development';
+const baseURL = isDevelopment 
+    ? 'http://localhost:3000/'
+    : 'https://finances-app-back.onrender.com/';
+
 const authApi = axios.create({
-    baseURL: `http://localhost:${PORT}/`,
+    baseURL,
     headers: {
         'Content-Type': 'application/json'
     }

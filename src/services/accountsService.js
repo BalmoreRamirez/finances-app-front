@@ -1,8 +1,8 @@
-import apiClient from './api';
+import apiClient, { apiRequest } from './api';
 
 export default {
     getAccounts() {
-        return apiClient.get('/accounts');
+        return apiRequest({ method: 'get', url: '/accounts' });
     },
     createAccount(accountData) {
         return apiClient.post('/accounts', accountData);
@@ -14,6 +14,6 @@ export default {
         return apiClient.delete(`/accounts/${accountId}`);
     },
     getAccountTypes() {
-        return apiClient.get('/account-types');
+        return apiRequest({ method: 'get', url: '/account-types' });
     },
 };

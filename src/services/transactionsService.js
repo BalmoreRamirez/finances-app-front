@@ -1,9 +1,9 @@
-import api from './api';
+import api, { apiRequest } from './api';
 
 const transactionsService = {
     // Transacciones
     getTransactions: () => {
-        return api.get('/transactions');
+        return apiRequest({ method: 'get', url: '/transactions' });
     },
     createTransaction: (transactionData) => {
         return api.post('/transactions', transactionData);
@@ -17,7 +17,7 @@ const transactionsService = {
 
     // Categorías de transacciones
     getTransactionCategories: () => {
-        return api.get('/transaction-categories');
+        return apiRequest({ method: 'get', url: '/transaction-categories' });
     },
     createTransactionCategory: (categoryData) => {
         return api.post('/transaction-categories', categoryData);

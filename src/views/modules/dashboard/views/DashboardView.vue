@@ -14,15 +14,46 @@
 
     const activeTab = ref('overview');
     const tabs = ['overview', 'income', 'expenses'];
+    const connectionStatus = ref('checking'); // 'checking', 'connected', 'disconnected', 'slow'
+    const retryAttempts = ref(0);
+
+    // Función para verificar estado de conectividad
+    const checkConnectionStatus = async () => {
+      connectionStatus.value = 'checking';
+      const startTime = Date.now();
+      
+      try {
+        await fetchTransactions();
+        const endTime = Date.now();
+        const responseTime = endTime - startTime;
+        
+        if (responseTime > 10000) { // Más de 10 segundos
+          connectionStatus.value = 'slow';
+        } else {
+          connectionStatus.value = 'connected';
+        }
+        retryAttempts.value = 0;
+      } catch (error) {
+        connectionStatus.value = 'disconnected';
+        console.error('Error de conectividad:', error);
+      }
+    };
 
     // Cargar datos al montar
     onMounted(async () => {
-      await Promise.all([
-        fetchTransactions(),
-        fetchAccounts(), 
-        fetchCategories(),
-        fetchCuentas()
-      ]);
+      try {
+        connectionStatus.value = 'checking';
+        await Promise.all([
+          fetchTransactions(),
+          fetchAccounts(), 
+          fetchCategories(),
+          fetchCuentas()
+        ]);
+        connectionStatus.value = 'connected';
+      } catch (error) {
+        connectionStatus.value = 'disconnected';
+        console.error('Error inicial de carga:', error);
+      }
     });
 
     const totalIngresosMes = computed(() => {
@@ -159,6 +190,29 @@
           <h1 class="text-2xl font-bold">Panel Financiero</h1>
         </header>
 
+        <!-- Banner de estado de conectividad -->
+        <div v-if="connectionStatus !== 'connected'" class="w-full px-4 py-2 text-center text-sm transition-all duration-300" 
+             :class="{
+               'bg-yellow-100 text-yellow-800 border-b border-yellow-200': connectionStatus === 'checking',
+               'bg-red-100 text-red-800 border-b border-red-200': connectionStatus === 'disconnected',
+               'bg-orange-100 text-orange-800 border-b border-orange-200': connectionStatus === 'slow'
+             }">
+          <div class="flex items-center justify-center space-x-2">
+            <span v-if="connectionStatus === 'checking'" class="inline-block w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></span>
+            <span v-else-if="connectionStatus === 'disconnected'" class="material-icons text-sm">cloud_off</span>
+            <span v-else-if="connectionStatus === 'slow'" class="material-icons text-sm">hourglass_top</span>
+            
+            <span v-if="connectionStatus === 'checking'">Cargando datos del servidor...</span>
+            <span v-else-if="connectionStatus === 'disconnected'">
+              Sin conexión al servidor. El servicio puede estar iniciándose.
+              <button @click="checkConnectionStatus" class="ml-2 underline hover:no-underline">Reintentar</button>
+            </span>
+            <span v-else-if="connectionStatus === 'slow'">
+              Conexión lenta detectada. El servidor puede estar iniciándose.
+            </span>
+          </div>
+        </div>
+
         <div class="container mx-auto px-4 py-8">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-background-subtle rounded-lg shadow p-6 border-l-4 border-finance-500">
@@ -203,3 +257,24 @@
         </div>
       </div>
     </template>
+
+    <style scoped>
+    @import url("https://fonts.googleapis.com/icon?family=Material+Icons");
+    
+    .material-icons {
+      font-family: 'Material Icons';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 16px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      font-feature-settings: 'liga';
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+    }
+    </style>

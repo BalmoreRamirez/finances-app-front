@@ -40,8 +40,19 @@
         </div>
         <div class="ml-4">
           <p class="text-sm text-gray-500">Ganancias Potenciales</p>
-          <p class="text-xl font-bold text-gray-800">{{ totalGanancias }}
-            {{ formatCurrency(totalEarnings) }}
+          <p class="text-xl font-bold text-gray-800">
+            {{ formatCurrency(totalGananciasPotenciales) }}
+          </p>
+        </div>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow-md flex items-center">
+        <div class="rounded-full bg-purple-100 p-3 flex items-center justify-center">
+          <i class="pi pi-check-circle text-xl text-purple-600"></i>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm text-gray-500">Ganancias Acumuladas</p>
+          <p class="text-xl font-bold text-gray-800">
+            {{ formatCurrency(totalGananciasAcumuladas) }}
           </p>
         </div>
       </div>
@@ -113,6 +124,11 @@
               <th
                 class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
               >
+                Total Pagado
+              </th>
+              <th
+                class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
+              >
                 Estado
               </th>
               <th
@@ -151,6 +167,12 @@
                 class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600"
               >
                 $ {{ inversion.expected_return|| 0 }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                <span v-if="esTipoCredito(inversion)" class="font-medium text-green-600">
+                  {{ formatCurrency(getTotalPagado(inversion)) }}
+                </span>
+                <span v-else class="text-gray-400">-</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
                 <Tag
@@ -222,6 +244,7 @@ import { storeToRefs } from "pinia";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { useFinanceStore } from "../../../../stores/financeStore.js";
+import { useInversionesStore } from "../../../../stores/investmentStore.js";
 import Button from "primevue/button";
 import ConfirmDialog from "primevue/confirmdialog";
 import Dropdown from "primevue/dropdown";
@@ -232,6 +255,7 @@ import Toast from "primevue/toast";
 
 // Stores y referencias
 const store = useFinanceStore();
+const investmentStore = useInversionesStore();
 const {
   deleteInvestment,
   addInvestment,
@@ -358,9 +382,27 @@ onMounted(async () => {
 // Computed
 const typesInvestmentList = computed(() => investmentTypes.value || []);
 const accountsList = computed(() => accountForSelect.value || []);
-const totalInvertido = computed(() => store.totalInvested);
+const totalInvertido = computed(() => {
+  // Sumar solo las inversiones activas
+  return (investments.value || [])
+    .filter(inv => inv.status === 'activa' || inv.estado === 'activa')
+    .reduce((sum, inv) => sum + parseFloat(inv.principal || 0), 0);
+});
 const totalEarnings = computed(() => store.totalEarnings);
 const totalInvertidoActivo = computed(() => store.totalActiveInvested);
+const totalGananciasPotenciales = computed(() => {
+  // Sumar solo las ganancias de inversiones activas
+  return (investments.value || [])
+    .filter(inv => inv.status === 'activa' || inv.estado === 'activa')
+    .reduce((sum, inv) => sum + parseFloat(inv.expected_return || 0), 0);
+});
+
+const totalGananciasAcumuladas = computed(() => {
+  // Sumar solo las ganancias de inversiones finalizadas/completadas/pagadas
+  return (investments.value || [])
+    .filter(inv => ['finalizada', 'completado', 'pagado'].includes(inv.status) || ['finalizada', 'completado', 'pagado'].includes(inv.estado))
+    .reduce((sum, inv) => sum + parseFloat(inv.expected_return || 0), 0);
+});
 
 // Helpers
 const formatCurrency = (value) => {
@@ -374,6 +416,38 @@ const getTipoLabel = (tipo) => {
   if (typeof tipo === "string")
     return tipo.charAt(0).toUpperCase() + tipo.slice(1);
   return tipo.nombre || tipo.label || "-";
+};
+
+// Función para verificar si es tipo crédito
+const esTipoCredito = (inversion) => {
+  const tipo = (inversion.investment_type?.name || inversion.tipo || '').toString().toLowerCase();
+  return tipo === 'crédito' || tipo === 'credito';
+};
+
+// Función para cargar pagos de todas las inversiones tipo crédito
+const cargarPagosCreditos = async () => {
+  const inversionesCredito = investments.value.filter(inv => esTipoCredito(inv));
+  
+  for (const inversion of inversionesCredito) {
+    try {
+      const result = await investmentStore.fetchPaymentsByInvestment(inversion.id);
+      if (result.success) {
+        pagosPorInversion.value[inversion.id] = investmentStore.payments || [];
+      }
+    } catch (error) {
+      console.error(`Error al cargar pagos para inversión ${inversion.id}:`, error);
+      pagosPorInversion.value[inversion.id] = [];
+    }
+  }
+};
+
+// Función para obtener el total pagado (suma de montos de cuotas)
+const getTotalPagado = (inversion) => {
+  const pagos = pagosPorInversion.value[inversion.id] || [];
+  return pagos.reduce((total, pago) => {
+    const monto = parseFloat(pago.amount || pago.monto || 0);
+    return total + monto;
+  }, 0);
 };
 
 const getEstadoTag = (status) => {
@@ -403,6 +477,20 @@ const getEstadoTag = (status) => {
 
 // Acciones
 const openCreateModal = () => {
+  // Función helper para formatear fecha local
+  const formatearFechaLocal = (fecha) => {
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()+1).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  // Obtener fecha actual
+  const fechaActual = new Date();
+  // Calcular fecha de vencimiento (15 días adelante)
+  const fechaVencimiento = new Date();
+  fechaVencimiento.setDate(fechaActual.getDate() + 15);
+  
   isEditMode.value = false;
   inversionToEdit.value = {
     investment_type_id: "",
@@ -410,8 +498,8 @@ const openCreateModal = () => {
     principal: 0,
     expected_return: 0,
     account_id: "",
-    start_date: null,
-    end_date: null,
+    start_date: formatearFechaLocal(fechaActual),
+    end_date: formatearFechaLocal(fechaVencimiento),
     status: "",
     notes: "",
   };
@@ -444,6 +532,8 @@ const handleSaveInversion = async (inversionData) => {
     });
     showModal.value = false;
     await fetchInvestments();
+    // Recargar pagos después de actualizar inversiones
+    await cargarPagosCreditos();
   } else {
     toast.add({
       severity: "error",

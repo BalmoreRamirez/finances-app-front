@@ -44,8 +44,8 @@ const menuItems = [
   },
 ];
 const logout = () => {
-  localStorage.removeItem('token');
-  router.push('/');
+  localStorage.removeItem('accessToken');
+  router.push('/login');
   emit('close-menu');
 };
 </script>

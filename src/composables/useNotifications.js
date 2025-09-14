@@ -95,6 +95,10 @@ export function useNotifications() {
         errorMessage = errorData.detail;
       }
     }
+    // Si es un error de timeout
+    else if (error?.code === 'ECONNABORTED' && error?.message?.includes('timeout')) {
+      errorMessage = "El servidor está tardando más de lo normal. Esto puede deberse a que el servicio se está iniciando. Inténtalo de nuevo en unos momentos.";
+    }
     // Si es un error de red o conexión
     else if (error?.code === 'ECONNREFUSED' || error?.code === 'NETWORK_ERROR') {
       errorMessage = "Error de conexión. Verifica tu conexión a internet.";
