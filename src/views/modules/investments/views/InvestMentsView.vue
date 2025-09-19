@@ -1,237 +1,198 @@
 <template>
-  <Toast />
-  <div class="space-y-6">
+  <div class="min-h-screen bg-background">
+    <Toast />
     <ConfirmDialog />
 
-    <!-- Cabecera -->
-    <div
-      class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-    >
-      <div>
-        <h1 class="text-3xl font-bold text-gray-800">Gestión de Inversiones</h1>
-        <p class="text-gray-500 mt-1">
-          Administra tus inversiones y créditos otorgados.
-        </p>
+    <!-- Header -->
+    <header class="bg-background-white border-b border-neutral-200 px-6 py-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-semibold text-text-primary">Gestión de Inversiones</h1>
+          <p class="text-sm text-text-muted mt-1">Administra tus inversiones y créditos otorgados</p>
+        </div>
+        <button
+          @click="openCreateModal"
+          class="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Registrar Inversión
+        </button>
       </div>
-      <Button
-        @click="openCreateModal"
-        label="Registrar Inversión"
-        icon="pi pi-plus"
-        severity="success"
-      />
-    </div>
+    </header>
 
-    <!-- Resumen estadístico -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white p-4 rounded-lg shadow-md flex items-center">
-        <div class="rounded-full bg-blue-100 p-3 flex items-center justify-center">
-          <i class="pi pi-wallet text-xl text-blue-600"></i>
+    <!-- Contenido principal -->
+    <div class="container mx-auto px-6 py-8 space-y-8">
+      <!-- Cards de resumen estadístico -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-background-white rounded-xl shadow-sm border border-neutral-100 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-text-muted mb-1">Total Invertido</p>
+              <p class="text-2xl font-semibold text-primary">{{ formatCurrency(totalInvertido) }}</p>
+            </div>
+            <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+          </div>
         </div>
-        <div class="ml-4">
-          <p class="text-sm text-gray-500">Total Invertido</p>
-          <p class="text-xl font-bold text-gray-800">
-            {{ formatCurrency(totalInvertido) }}
-          </p>
-        </div>
-      </div>
-      <div class="bg-white p-4 rounded-lg shadow-md flex items-center">
-        <div class="rounded-full bg-green-100 p-3 flex items-center justify-center">
-          <i class="pi pi-chart-line text-xl text-green-600"></i>
-        </div>
-        <div class="ml-4">
-          <p class="text-sm text-gray-500">Ganancias Potenciales</p>
-          <p class="text-xl font-bold text-gray-800">
-            {{ formatCurrency(totalGananciasPotenciales) }}
-          </p>
-        </div>
-      </div>
-      <div class="bg-white p-4 rounded-lg shadow-md flex items-center">
-        <div class="rounded-full bg-purple-100 p-3 flex items-center justify-center">
-          <i class="pi pi-check-circle text-xl text-purple-600"></i>
-        </div>
-        <div class="ml-4">
-          <p class="text-sm text-gray-500">Ganancias Acumuladas</p>
-          <p class="text-xl font-bold text-gray-800">
-            {{ formatCurrency(totalGananciasAcumuladas) }}
-          </p>
-        </div>
-      </div>
-      <div class="bg-white p-4 rounded-lg shadow-md flex items-center">
-        <div class="rounded-full bg-amber-100 p-3 flex items-center justify-center">
-          <i class="pi pi-bolt text-xl text-amber-600"></i>
-        </div>
-        <div class="ml-4">
-          <p class="text-sm text-gray-500">Inversiones Activas</p>
-          <p class="text-xl font-bold text-gray-800">
-            {{ totalInvertidoActivo }}
-          </p>
-        </div>
-      </div>
-    </div>
 
+        <div class="bg-background-white rounded-xl shadow-sm border border-neutral-100 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-text-muted mb-1">Ganancias Potenciales</p>
+              <p class="text-2xl font-semibold text-success-500">{{ formatCurrency(totalGananciasPotenciales) }}</p>
+            </div>
+            <div class="w-12 h-12 bg-success-500/10 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-success-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+          </div>
+        </div>
 
-    <!-- Filtros -->
-    <div class="flex flex-col md:flex-row justify-end gap-4 mb-4">
-      <div class="w-full md:w-72">
-        <label for="filtro-estado" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por estado:</label>
-        <Dropdown
-          v-model="filtroEstado"
-          :options="estadosFiltro"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Seleccionar estado"
-          class="w-full"
-        />
+        <div class="bg-background-white rounded-xl shadow-sm border border-neutral-100 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-text-muted mb-1">Ganancias Acumuladas</p>
+              <p class="text-2xl font-semibold text-secondary">{{ formatCurrency(totalGananciasAcumuladas) }}</p>
+            </div>
+            <div class="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-background-white rounded-xl shadow-sm border border-neutral-100 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-text-muted mb-1">Inversiones Activas</p>
+              <p class="text-2xl font-semibold text-warning-500">{{ totalInvertidoActivo }}</p>
+            </div>
+            <div class="w-12 h-12 bg-warning-500/10 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-warning-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <!-- Tabla de Inversiones -->
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-              >
-                ID
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-              >
-                Inversión
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-              >
-                Tipo
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-              >
-                Cuenta
-              </th>
-              <th
-                class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase"
-              >
-                Monto Invertido
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-              >
-                Ganancia
-              </th>
-              <th
-                class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
-              >
-                Total Pagado
-              </th>
-              <th
-                class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
-              >
-                Estado
-              </th>
-              <th
-                class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
-              >
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="(inversion, idx) in filteredInvestments" :key="inversion.id">
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ idx + 1 }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-medium text-gray-900">
-                  {{ inversion.name }}
-                </div>
-              </td>
-              <td
-                class="px-6 py-4 whitespace-nowrap text-sm capitalize text-gray-500"
-              >
-                {{ getTipoLabel(inversion.investment_type?.name || "-") }}
-              </td>
-              <td
-                class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
-              >
-                {{ inversion.account?.name || "No Asignada" }}
-              </td>
-              <td
-                class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-800"
-              >
-                {{ formatCurrency(parseFloat(inversion.principal || 0)) }}
-              </td>
-              <td
-                class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600"
-              >
-                $ {{ inversion.expected_return|| 0 }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
-                <span v-if="esTipoCredito(inversion)" class="font-medium text-green-600">
-                  {{ formatCurrency(getTotalPagado(inversion)) }}
-                </span>
-                <span v-else class="text-gray-400">-</span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-center">
-                <Tag
-                  :severity="
-                    getEstadoTag(inversion.status || inversion.estado).severity
-                  "
-                  :value="
-                    getEstadoTag(inversion.status || inversion.estado).text
-                  "
-                  rounded
-                />
-              </td>
-              <td
-                class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2"
-              >
-                <Button
-                  v-if="
-                    (inversion.investment_type?.name || inversion.tipo || '').toString().toLowerCase() === 'crédito' ||
-                    (inversion.investment_type?.name || inversion.tipo || '').toString().toLowerCase() === 'credito'
-                  "
-                  icon="pi pi-eye"
-                  severity="info"
-                  text
-                  rounded
-                  @click="verDetalleCredito(inversion)"
-                  v-tooltip.top="'Ver pagos del crédito'"
-                />
-                <Button
-                  icon="pi pi-pencil"
-                  severity="warning"
-                  text
-                  rounded
-                  @click="openEditModal(inversion)"
-                  v-tooltip.top="'Editar inversión'"
-                />
-                <Button
-                  icon="pi pi-trash"
-                  severity="danger"
-                  text
-                  rounded
-                  @click="handleDeleteInversion(inversion.id)"
-                  v-tooltip.top="'Eliminar inversión'"
-                />
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Filtros -->
+      <div class="bg-background-white rounded-xl shadow-sm border border-neutral-100 p-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h2 class="text-lg font-semibold text-text-primary">Lista de Inversiones</h2>
+          <div class="flex items-center space-x-3">
+            <label class="text-sm font-medium text-text-muted">Filtrar por estado:</label>
+            <Dropdown
+              v-model="filtroEstado"
+              :options="estadosFiltro"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Seleccionar estado"
+              class="w-48"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de Inversiones -->
+      <div class="bg-background-white rounded-xl shadow-sm border border-neutral-100 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-neutral-100">
+            <thead class="bg-background-light">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">ID</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Inversión</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Tipo</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Cuenta</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider">Monto Invertido</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Ganancia</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-text-muted uppercase tracking-wider">Total Pagado</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-text-muted uppercase tracking-wider">Estado</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-text-muted uppercase tracking-wider">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="bg-background-white divide-y divide-neutral-50">
+              <tr v-for="(inversion, idx) in filteredInvestments" :key="inversion.id" class="hover:bg-background-light transition-colors">
+                <td class="px-6 py-4 text-sm text-text-muted">{{ idx + 1 }}</td>
+                <td class="px-6 py-4">
+                  <div class="text-sm font-medium text-text-primary">{{ inversion.name }}</div>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                        :class="getTypeBadgeClass(inversion.type)">
+                    {{ getTypeLabel(inversion.type) }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-text-muted">
+                  {{ getAccountName(inversion.account_id) }}
+                </td>
+                <td class="px-6 py-4 text-sm font-semibold text-text-primary text-right">
+                  {{ formatCurrency(inversion.amount) }}
+                </td>
+                <td class="px-6 py-4 text-sm font-semibold text-success-500">
+                  {{ formatCurrency(inversion.expected_return || 0) }}
+                </td>
+                <td class="px-6 py-4 text-center text-sm font-semibold text-secondary">
+                  {{ formatCurrency(inversion.total_paid || 0) }}
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                        :class="getStatusBadgeClass(inversion.status)">
+                    {{ getStatusLabel(inversion.status) }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <div class="flex items-center justify-center space-x-2">
+                    <button
+                      @click="openEditModal(inversion)"
+                      class="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      @click="confirmDelete(inversion.id)"
+                      class="p-2 text-danger-500 hover:bg-danger-50 rounded-lg transition-colors"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="filteredInvestments.length === 0">
+                <td colspan="9" class="px-6 py-8 text-center text-text-muted">
+                  <div class="flex flex-col items-center">
+                    <svg class="w-12 h-12 text-neutral-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                    <p class="text-lg font-medium mb-1">No hay inversiones</p>
+                    <p class="text-sm">Registra tu primera inversión para comenzar</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- Modal: Pasamos los tipos de inversión como prop -->
+    <!-- Modal de inversión -->
     <InvestmentModal
-      :visible="showModal"
-      :isEditMode="isEditMode"
-      :inversionData="inversionToEdit"
-      :tiposInversion="typesInvestmentList"
-      :cuentas="accountsList"
-      @update:visible="showModal = $event"
-      @save="handleSaveInversion"
+      v-model:visible="showModal"
+      :is-edit-mode="isEditMode"
+      :investment-data="investmentToEdit"
+      :accounts="accounts"
+      @save="handleSaveInvestment"
     />
   </div>
 </template>
@@ -550,8 +511,7 @@ const handleSaveInversion = async (inversionData) => {
 
 const handleDeleteInversion = (id) => {
   confirm.require({
-    message:
-      "¿Estás seguro de que deseas eliminar esta inversión? Esta acción no se puede deshacer.",
+    message: "¿Estás seguro de que deseas eliminar esta inversión? Esta acción no se puede deshacer.",
     header: "Confirmar eliminación",
     icon: "pi pi-exclamation-triangle",
     acceptClass: "p-button-danger",
@@ -564,6 +524,7 @@ const handleDeleteInversion = (id) => {
           detail: result.message,
           life: 3000,
         });
+        await fetchInvestments();
       } else {
         toast.add({
           severity: "error",
@@ -576,7 +537,72 @@ const handleDeleteInversion = (id) => {
   });
 };
 
-const verDetalleCredito = (inversion) => {
-  router.push({ name: "detalle-credito", params: { id: inversion.id } });
+// Funciones helper para el nuevo diseño minimalista
+const getTypeBadgeClass = (type) => {
+  const tipoStr = (type?.name || type || '').toLowerCase();
+  if (tipoStr.includes('crédito') || tipoStr.includes('credito')) {
+    return 'bg-primary/10 text-primary';
+  }
+  if (tipoStr.includes('inversión') || tipoStr.includes('inversion')) {
+    return 'bg-success-100 text-success-600';
+  }
+  return 'bg-neutral-100 text-neutral-600';
 };
+
+const getTypeLabel = (type) => {
+  if (!type) return 'Sin tipo';
+  if (typeof type === 'object') return type.name || type.label || 'Sin tipo';
+  return type.charAt(0).toUpperCase() + type.slice(1);
+};
+
+const getStatusBadgeClass = (status) => {
+  const estado = (status || '').toLowerCase();
+  switch (estado) {
+    case 'activa':
+    case 'activo':
+      return 'bg-success-100 text-success-600';
+    case 'finalizada':
+    case 'completado':
+    case 'pagado':
+      return 'bg-primary/10 text-primary';
+    case 'vencido':
+      return 'bg-danger-100 text-danger-600';
+    case 'pendiente':
+      return 'bg-warning-100 text-warning-600';
+    default:
+      return 'bg-neutral-100 text-neutral-600';
+  }
+};
+
+const getStatusLabel = (status) => {
+  const estado = (status || '').toLowerCase();
+  switch (estado) {
+    case 'activa':
+    case 'activo':
+      return 'Activa';
+    case 'finalizada':
+      return 'Finalizada';
+    case 'completado':
+      return 'Completado';
+    case 'pagado':
+      return 'Pagado';
+    case 'vencido':
+      return 'Vencido';
+    case 'pendiente':
+      return 'Pendiente';
+    default:
+      return status || 'Sin estado';
+  }
+};
+
+const getAccountName = (accountId) => {
+  const account = accountsList.value.find(acc => acc.id === accountId);
+  return account?.name || account?.label || 'Sin cuenta';
+};
+
+// Alias para mantener compatibilidad
+const handleSaveInvestment = handleSaveInversion;
+const confirmDelete = handleDeleteInversion;
+const investmentToEdit = inversionToEdit;
+const accounts = accountsList;
 </script>

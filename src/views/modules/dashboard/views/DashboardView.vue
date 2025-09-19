@@ -1,21 +1,25 @@
 <script setup>
-    import { ref, onMounted, computed, watch } from 'vue';
-    import Chart from 'chart.js/auto';
-    import { useTransaccionesStore } from '../../../../stores/transactionStore.js';
-    import { useCuentasStore } from '../../../../stores/accountStore.js';
-    import { storeToRefs } from 'pinia';
+import { ref, onMounted, computed, watch } from 'vue';
+import Chart from 'chart.js/auto';
+import { useTransaccionesStore } from '../../../../stores/transactionStore.js';
+import { useCuentasStore } from '../../../../stores/accountStore.js';
+import { storeToRefs } from 'pinia';
 
-    const store = useTransaccionesStore();
-    const cuentasStore = useCuentasStore();
-    const { transacciones, ingresos, gastos, accounts, categories, isLoading } = storeToRefs(store);
-    const { capitalTotal, totalEfectivo, totalBanco } = storeToRefs(cuentasStore);
-    const { fetchTransactions, fetchAccounts, fetchCategories } = store;
-    const { fetchAccounts: fetchCuentas } = cuentasStore;
+const store = useTransaccionesStore();
+const cuentasStore = useCuentasStore();
+const { transacciones, ingresos, gastos, accounts, categories, isLoading } = storeToRefs(store);
+const { capitalTotal, totalEfectivo, totalBanco } = storeToRefs(cuentasStore);
+const { fetchTransactions, fetchAccounts, fetchCategories } = store;
+const { fetchAccounts: fetchCuentas } = cuentasStore;
 
-    const activeTab = ref('overview');
-    const tabs = ['overview', 'income', 'expenses'];
-    const connectionStatus = ref('checking'); // 'checking', 'connected', 'disconnected', 'slow'
-    const retryAttempts = ref(0);
+const activeTab = ref('overview');
+const tabs = [
+  { id: 'overview', name: 'Resumen', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+  { id: 'income', name: 'Ingresos', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' },
+  { id: 'expenses', name: 'Gastos', icon: 'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6' }
+];
+const connectionStatus = ref('checking');
+const retryAttempts = ref(0);
 
     // Función para verificar estado de conectividad
     const checkConnectionStatus = async () => {
@@ -150,27 +154,123 @@
           data: {
             labels: data.labels,
             datasets: [
-              { label: 'Ingresos', data: data.income, borderColor: '#1D4634', tension: 0.3 },
-              { label: 'Egresos', data: data.expenses, borderColor: '#DF9B6A', tension: 0.3 }
+              {
+                label: 'Ingresos',
+                data: data.income,
+                borderColor: '#5A5BFF',
+                backgroundColor: 'rgba(90, 91, 255, 0.1)',
+                tension: 0.4,
+                borderWidth: 2,
+                pointBackgroundColor: '#5A5BFF',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 4
+              },
+              {
+                label: 'Gastos',
+                data: data.expenses,
+                borderColor: '#EF4444',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                tension: 0.4,
+                borderWidth: 2,
+                pointBackgroundColor: '#EF4444',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 4
+              }
             ]
           },
-          options: { responsive: true, maintainAspectRatio: false }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  usePointStyle: true,
+                  color: '#475259'
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { color: '#475259' }
+              },
+              y: {
+                grid: { color: 'rgba(71, 82, 89, 0.1)' },
+                ticks: { color: '#475259' }
+              }
+            }
+          }
         });
       }
+
       if (activeTab.value === 'income' && incomePieRef.value) {
         if (charts.incomePie) charts.incomePie.destroy();
         charts.incomePie = new Chart(incomePieRef.value.getContext('2d'), {
           type: 'doughnut',
-          data: { labels: incomeCategoryData.value.labels, datasets: [{ data: incomeCategoryData.value.data }] },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Ingresos por categoría' } } }
+          data: {
+            labels: incomeCategoryData.value.labels,
+            datasets: [{
+              data: incomeCategoryData.value.data,
+              backgroundColor: [
+                '#5A5BFF',
+                '#10B981',
+                '#8505A6',
+                '#F59E0B',
+                '#EF4444',
+                '#6366F1'
+              ]
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  color: '#475259',
+                  usePointStyle: true
+                }
+              }
+            }
+          }
         });
       }
+
       if (activeTab.value === 'expenses' && expensePieRef.value) {
         if (charts.expensePie) charts.expensePie.destroy();
         charts.expensePie = new Chart(expensePieRef.value.getContext('2d'), {
           type: 'doughnut',
-          data: { labels: expenseCategoryData.value.labels, datasets: [{ data: expenseCategoryData.value.data }] },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Gastos por categoría' } } }
+          data: {
+            labels: expenseCategoryData.value.labels,
+            datasets: [{
+              data: expenseCategoryData.value.data,
+              backgroundColor: [
+                '#EF4444',
+                '#F59E0B',
+                '#8505A6',
+                '#6366F1',
+                '#10B981',
+                '#5A5BFF'
+              ]
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  color: '#475259',
+                  usePointStyle: true
+                }
+              }
+            }
+          }
         });
       }
     };
@@ -182,99 +282,172 @@
     onMounted(createCharts);
 
     const formatCurrency = (value) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
-    </script>
+</script>
 
-    <template>
-      <div>
-        <header class="bg-finance-700 text-background p-6">
-          <h1 class="text-2xl font-bold">Panel Financiero</h1>
-        </header>
+<template>
+  <div class="min-h-screen bg-background">
+    <!-- Header minimalista -->
+    <header class="bg-background-white border-b border-neutral-200 px-6 py-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-semibold text-text-primary">Dashboard Financiero</h1>
+        <div class="flex items-center space-x-2">
+          <div class="w-2 h-2 rounded-full" :class="{
+            'bg-warning-500 animate-pulse': connectionStatus === 'checking',
+            'bg-success-500': connectionStatus === 'connected',
+            'bg-danger-500': connectionStatus === 'disconnected',
+            'bg-warning-500': connectionStatus === 'slow'
+          }"></div>
+          <span class="text-sm text-text-muted">
+            {{ connectionStatus === 'connected' ? 'Conectado' :
+               connectionStatus === 'checking' ? 'Cargando...' :
+               connectionStatus === 'slow' ? 'Conexión lenta' : 'Sin conexión' }}
+          </span>
+        </div>
+      </div>
+    </header>
 
-        <!-- Banner de estado de conectividad -->
-        <div v-if="connectionStatus !== 'connected'" class="w-full px-4 py-2 text-center text-sm transition-all duration-300" 
-             :class="{
-               'bg-yellow-100 text-yellow-800 border-b border-yellow-200': connectionStatus === 'checking',
-               'bg-red-100 text-red-800 border-b border-red-200': connectionStatus === 'disconnected',
-               'bg-orange-100 text-orange-800 border-b border-orange-200': connectionStatus === 'slow'
-             }">
-          <div class="flex items-center justify-center space-x-2">
-            <span v-if="connectionStatus === 'checking'" class="inline-block w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></span>
-            <span v-else-if="connectionStatus === 'disconnected'" class="material-icons text-sm">cloud_off</span>
-            <span v-else-if="connectionStatus === 'slow'" class="material-icons text-sm">hourglass_top</span>
-            
-            <span v-if="connectionStatus === 'checking'">Cargando datos del servidor...</span>
-            <span v-else-if="connectionStatus === 'disconnected'">
-              Sin conexión al servidor. El servicio puede estar iniciándose.
-              <button @click="checkConnectionStatus" class="ml-2 underline hover:no-underline">Reintentar</button>
-            </span>
-            <span v-else-if="connectionStatus === 'slow'">
-              Conexión lenta detectada. El servidor puede estar iniciándose.
-            </span>
+    <!-- Banner de estado de conectividad -->
+    <div v-if="connectionStatus !== 'connected'" class="w-full px-4 py-3 text-center text-sm transition-all duration-300"
+         :class="{
+           'bg-warning-50 text-warning-700 border-b border-warning-100': connectionStatus === 'checking',
+           'bg-danger-50 text-danger-700 border-b border-danger-100': connectionStatus === 'disconnected',
+           'bg-warning-50 text-warning-700 border-b border-warning-100': connectionStatus === 'slow'
+         }">
+      <div class="flex items-center justify-center space-x-2">
+        <svg v-if="connectionStatus === 'checking'" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <svg v-else-if="connectionStatus === 'disconnected'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-12.728 12.728m0-12.728l12.728 12.728" />
+        </svg>
+        <svg v-else-if="connectionStatus === 'slow'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+
+        <span v-if="connectionStatus === 'checking'">Cargando datos del servidor...</span>
+        <span v-else-if="connectionStatus === 'disconnected'">
+          Sin conexión al servidor.
+          <button @click="checkConnectionStatus" class="ml-2 text-primary underline hover:no-underline">Reintentar</button>
+        </span>
+        <span v-else-if="connectionStatus === 'slow'">Conexión lenta detectada.</span>
+      </div>
+    </div>
+
+    <div class="container mx-auto px-6 py-8">
+      <!-- Tarjetas de resumen -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-background-white rounded-xl shadow-sm border border-neutral-100 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-text-muted mb-1">Ingresos del Mes</p>
+              <p class="text-2xl font-semibold text-success-500">{{ formatCurrency(totalIngresosMes) }}</p>
+            </div>
+            <div class="w-12 h-12 bg-success-500 bg-opacity-10 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-success-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
           </div>
         </div>
 
-        <div class="container mx-auto px-4 py-8">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-background-subtle rounded-lg shadow p-6 border-l-4 border-finance-500">
-              <h2 class="text-neutral-700 font-semibold mb-2">Ingresos (Mes)</h2>
-              <p class="text-finance-500 text-2xl font-bold">{{ formatCurrency(totalIngresosMes) }}</p>
+        <div class="bg-background-white rounded-xl shadow-sm border border-neutral-100 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-text-muted mb-1">Gastos del Mes</p>
+              <p class="text-2xl font-semibold text-danger-500">{{ formatCurrency(totalGastosMes) }}</p>
             </div>
-            <div class="bg-background-subtle rounded-lg shadow p-6 border-l-4 border-accent-500">
-              <h2 class="text-neutral-700 font-semibold mb-2">Egresos (Mes)</h2>
-              <p class="text-accent-700 text-2xl font-bold">{{ formatCurrency(totalGastosMes) }}</p>
-            </div>
-            <div class="bg-background-subtle rounded-lg shadow p-6 border-l-4 border-neutral-500">
-              <h2 class="text-neutral-700 font-semibold mb-2">Capital Total</h2>
-              <p class="text-neutral-900 text-2xl font-bold">{{ formatCurrency(balanceGeneral) }}</p>
+            <div class="w-12 h-12 bg-danger-500 bg-opacity-10 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-danger-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+              </svg>
             </div>
           </div>
+        </div>
 
-          <div class="mt-6">
-            <div class="border-b border-gray-200">
-              <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                <button v-for="tab in tabs" :key="tab" @click="activeTab = tab"
-                        :class="[activeTab === tab ? 'border-finance-500 text-finance-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300', 'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize']">
-                  {{ tab }}
-                </button>
-              </nav>
+        <div class="bg-background-white rounded-xl shadow-sm border border-neutral-100 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-text-muted mb-1">Capital Total</p>
+              <p class="text-2xl font-bold text-gradient">{{ formatCurrency(balanceGeneral) }}</p>
             </div>
-
-            <div v-if="activeTab === 'overview'" class="mt-6 bg-background-light rounded-lg shadow p-6">
-              <h2 class="text-xl font-bold mb-4 text-finance-700">Flujo de Efectivo Anual</h2>
-              <div class="h-96"><canvas ref="lineChartRef"></canvas></div>
-            </div>
-
-            <div v-if="activeTab === 'income'" class="mt-6 bg-background-light rounded-lg shadow p-6">
-               <h2 class="text-xl font-bold mb-4 text-finance-700">Ingresos por Categoría</h2>
-              <div class="h-96"><canvas ref="incomePieRef"></canvas></div>
-            </div>
-
-            <div v-if="activeTab === 'expenses'" class="mt-6 bg-background-light rounded-lg shadow p-6">
-               <h2 class="text-xl font-bold mb-4 text-finance-700">Gastos por Categoría</h2>
-              <div class="h-96"><canvas ref="expensePieRef"></canvas></div>
+            <div class="w-12 h-12 bg-primary bg-opacity-10 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
             </div>
           </div>
         </div>
       </div>
-    </template>
 
-    <style scoped>
-    @import url("https://fonts.googleapis.com/icon?family=Material+Icons");
-    
-    .material-icons {
-      font-family: 'Material Icons';
-      font-weight: normal;
-      font-style: normal;
-      font-size: 16px;
-      line-height: 1;
-      letter-spacing: normal;
-      text-transform: none;
-      display: inline-block;
-      white-space: nowrap;
-      word-wrap: normal;
-      direction: ltr;
-      font-feature-settings: 'liga';
-      -webkit-font-feature-settings: 'liga';
-      -webkit-font-smoothing: antialiased;
-    }
-    </style>
+      <!-- Navegación de pestañas -->
+      <div class="bg-background-white rounded-xl shadow-sm border border-neutral-100 overflow-hidden">
+        <div class="border-b border-neutral-100">
+          <nav class="flex space-x-8 px-6" aria-label="Tabs">
+            <button
+              v-for="tab in tabs"
+              :key="tab.id"
+              @click="activeTab = tab.id"
+              :class="[
+                activeTab === tab.id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-text-muted hover:text-text-primary hover:border-neutral-300',
+                'flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors'
+              ]"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="tab.icon" />
+              </svg>
+              <span>{{ tab.name }}</span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- Contenido de las pestañas -->
+        <div class="p-6">
+          <div v-if="activeTab === 'overview'">
+            <h2 class="text-xl font-semibold mb-6 text-text-primary">Flujo de Efectivo Anual</h2>
+            <div class="h-96">
+              <canvas ref="lineChartRef"></canvas>
+            </div>
+          </div>
+
+          <div v-if="activeTab === 'income'">
+            <h2 class="text-xl font-semibold mb-6 text-text-primary">Ingresos por Categoría</h2>
+            <div class="h-96">
+              <canvas ref="incomePieRef"></canvas>
+            </div>
+          </div>
+
+          <div v-if="activeTab === 'expenses'">
+            <h2 class="text-xl font-semibold mb-6 text-text-primary">Gastos por Categoría</h2>
+            <div class="h-96">
+              <canvas ref="expensePieRef"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+@import url("https://fonts.googleapis.com/icon?family=Material+Icons");
+
+.material-icons {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+</style>

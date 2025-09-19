@@ -11,135 +11,202 @@
       <!-- Campos Comunes -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Select
-            v-model="v$.investment_type_id.$model"
-            :errors="v$.investment_type_id.$errors"
-            :items="tiposInversion"
+          <label class="block text-sm font-medium text-gray-700 mb-2"
+            >Tipo de Inversión *</label
+          >
+          <Dropdown
+            v-model="data.investment_type_id"
+            :options="tiposInversion"
             optionLabel="nombre"
-            placeholder="Tipo de Inversión*"
+            optionValue="value"
+            placeholder="Seleccionar tipo de inversión"
+            class="w-full"
+            :class="{ 'p-invalid': v$.investment_type_id.$error }"
           />
+          <small v-if="v$.investment_type_id.$error" class="p-error">
+            {{ v$.investment_type_id.$errors[0].$message }}
+          </small>
         </div>
         <div>
-          <Select
-            v-model="v$.account_id.$model"
-            :errors="v$.account_id.$errors"
-            :items="cuentas"
+          <label class="block text-sm font-medium text-gray-700 mb-2"
+            >Cuenta de Origen *</label
+          >
+          <Dropdown
+            v-model="data.account_id"
+            :options="cuentas"
             optionLabel="nombre"
-            placeholder="Cuenta de Origen"
+            optionValue="value"
+            placeholder="Seleccionar cuenta"
             class="w-full"
+            :class="{ 'p-invalid': v$.account_id.$error }"
           />
+          <small v-if="v$.account_id.$error" class="p-error">
+            {{ v$.account_id.$errors[0].$message }}
+          </small>
         </div>
       </div>
-      <!-- Descripción removida -->
+
+      <!-- Nombre de la inversión -->
       <div>
-        <Input
-          v-model="v$.name.$model"
-          :errors="v$.name.$errors"
-          placeholder="Nombre inversión*"
+        <label class="block text-sm font-medium text-gray-700 mb-2"
+          >Nombre de la Inversión *</label
+        >
+        <InputText
+          v-model="data.name"
+          placeholder="Ingrese el nombre de la inversión"
           class="w-full"
+          :class="{ 'p-invalid': v$.name.$error }"
         />
+        <small v-if="v$.name.$error" class="p-error">
+          {{ v$.name.$errors[0].$message }}
+        </small>
       </div>
 
-      <!-- Campos Condicionales para Compra -->
+      <!-- Campos de montos -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Number
-            v-model="v$.principal.$model"
-            :errors="v$.principal.$errors"
-            placeholder="Total Invertido*"
+          <label class="block text-sm font-medium text-gray-700 mb-2"
+            >Monto Invertido *</label
+          >
+          <InputNumber
+            v-model="data.principal"
+            mode="currency"
+            currency="MXN"
+            locale="es-MX"
             :min="1"
+            placeholder="0.00"
             class="w-full"
+            :class="{ 'p-invalid': v$.principal.$error }"
           />
+          <small v-if="v$.principal.$error" class="p-error">
+            {{ v$.principal.$errors[0].$message }}
+          </small>
         </div>
         <div>
-          <Number
-            v-model="v$.expected_return.$model"
-            :errors="v$.expected_return.$errors"
-            placeholder="Retorno Esperado*"
+          <label class="block text-sm font-medium text-gray-700 mb-2"
+            >Retorno Esperado *</label
+          >
+          <InputNumber
+            v-model="data.expected_return"
+            mode="currency"
+            currency="MXN"
+            locale="es-MX"
             :min="1"
+            placeholder="0.00"
             class="w-full"
+            :class="{ 'p-invalid': v$.expected_return.$error }"
           />
+          <small v-if="v$.expected_return.$error" class="p-error">
+            {{ v$.expected_return.$errors[0].$message }}
+          </small>
         </div>
       </div>
 
+      <!-- Notas -->
       <div>
-        <Input
-          v-model="v$.notes.$model"
-          :errors="v$.notes.$errors"
-          placeholder="Commentario*"
+        <label class="block text-sm font-medium text-gray-700 mb-2"
+          >Comentarios *</label
+        >
+        <Textarea
+          v-model="data.notes"
+          placeholder="Ingrese comentarios sobre la inversión"
+          rows="3"
           class="w-full"
+          :class="{ 'p-invalid': v$.notes.$error }"
         />
+        <small v-if="v$.notes.$error" class="p-error">
+          {{ v$.notes.$errors[0].$message }}
+        </small>
       </div>
 
       <!-- Campo de Estado (solo en modo edición) -->
       <div v-if="props.isEditMode">
-        <Select
-          v-model="v$.status.$model"
-          :errors="v$.status.$errors"
-          :items="estadosInversion"
+        <label class="block text-sm font-medium text-gray-700 mb-2"
+          >Estado de la Inversión *</label
+        >
+        <Dropdown
+          v-model="data.status"
+          :options="estadosInversion"
           optionLabel="nombre"
-          placeholder="Estado de la Inversión*"
+          optionValue="value"
+          placeholder="Seleccionar estado"
           class="w-full"
+          :class="{ 'p-invalid': v$.status.$error }"
         />
+        <small v-if="v$.status.$error" class="p-error">
+          {{ v$.status.$errors[0].$message }}
+        </small>
       </div>
-    </div>
-    <!-- Resumen de Cálculos (siempre visible) -->
-    <div
-      class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-3 rounded-md"
-    >
-      <div>
-        <p class="text-sm text-gray-500">Monto Total Invertido</p>
-        <p class="font-semibold text-gray-800">
-          {{ formatCurrency(montoCalculado) }}
-        </p>
-      </div>
-      <div>
-        <p class="text-sm text-gray-500">Ganancia Estimada</p>
-        <p class="font-semibold text-green-600">
-          {{ formatCurrency(gananciaCalculada) }}
-        </p>
-      </div>
-      <div>
-        <p class="text-sm text-gray-500">Monto Total a Recibir</p>
-        <p class="font-semibold text-blue-600">
-          {{ formatCurrency(montoTotalCalculado) }}
-        </p>
-      </div>
-    </div>
 
-    <!-- Fechas -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label
-          for="fechaInversion"
-          class="block text-sm font-medium text-gray-700 mb-1"
-          >Fecha de Inversión / Compra</label
-        >
-        <Calendar
-          v-model="v$.start_date.$model"
-          :errors="v$.start_date.$errors"
-          dateFormat="dd/mm/yy"
-          showIcon
-        />
+      <!-- Fechas -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2"
+            >Fecha de Inversión *</label
+          >
+          <Calendar
+            v-model="data.start_date"
+            dateFormat="dd/mm/yy"
+            showIcon
+            placeholder="Seleccionar fecha"
+            class="w-full"
+            :class="{ 'p-invalid': v$.start_date.$error }"
+          />
+          <small v-if="v$.start_date.$error" class="p-error">
+            {{ v$.start_date.$errors[0].$message }}
+          </small>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2"
+            >Fecha de Vencimiento *</label
+          >
+          <Calendar
+            v-model="data.end_date"
+            dateFormat="dd/mm/yy"
+            showIcon
+            placeholder="Seleccionar fecha"
+            class="w-full"
+            :class="{ 'p-invalid': v$.end_date.$error }"
+          />
+          <small v-if="v$.end_date.$error" class="p-error">
+            {{ v$.end_date.$errors[0].$message }}
+          </small>
+        </div>
       </div>
-      <div>
-        <label
-          for="fechaVencimiento"
-          class="block text-sm font-medium text-gray-700 mb-1"
-          >Fecha de Vencimiento / Venta</label
-        >
-        <Calendar
-          v-model="v$.end_date.$model"
-          :errors="v$.end_date.$errors"
-          dateFormat="dd/mm/yy"
-          showIcon
-        />
+
+      <!-- Resumen de Cálculos -->
+      <div
+        class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-background-light p-4 rounded-lg border border-neutral-100"
+      >
+        <div>
+          <p class="text-sm text-text-muted">Monto Total Invertido</p>
+          <p class="font-semibold text-primary">
+            {{ formatCurrency(montoCalculado) }}
+          </p>
+        </div>
+        <div>
+          <p class="text-sm text-text-muted">Ganancia Estimada</p>
+          <p class="font-semibold text-success-500">
+            {{ formatCurrency(gananciaCalculada) }}
+          </p>
+        </div>
+        <div>
+          <p class="text-sm text-text-muted">Monto Total a Recibir</p>
+          <p class="font-semibold text-secondary">
+            {{ formatCurrency(montoTotalCalculado) }}
+          </p>
+        </div>
       </div>
     </div>
 
     <template #footer>
       <Button label="Cancelar" icon="pi pi-times" text @click="closeModal" />
-      <Button label="Guardar" icon="pi pi-check" @click="saveInversion" />
+      <Button
+        label="Guardar"
+        icon="pi pi-check"
+        @click="saveInversion"
+        :loading="saving"
+      />
     </template>
   </Dialog>
 </template>
@@ -151,14 +218,18 @@ import useVuelidate from "@vuelidate/core";
 import Dialog from "primevue/dialog";
 import Calendar from "primevue/calendar";
 import Button from "primevue/button";
+import Dropdown from "primevue/dropdown";
+import InputNumber from "primevue/inputnumber";
+import InputText from "primevue/inputtext";
+import Textarea from "primevue/textarea";
+import { useFinanceStore } from "../../../../stores/financeStore.js";
 
 // --- PROPS & EMITS ---
 const props = defineProps({
   visible: Boolean,
   isEditMode: Boolean,
-  inversionData: Object,
-  tiposInversion: Array,
-  cuentas: Array,
+  investmentData: Object, // Cambié de inversionData a investmentData
+  accounts: Array, // Cambié de cuentas a accounts para que coincida con la vista
 });
 const emit = defineEmits(["update:visible", "save"]);
 
@@ -176,13 +247,33 @@ const data = ref({
   id: null,
 });
 
+const saving = ref(false);
+const submitted = ref(false);
+
 // --- OPCIONES DE ESTADO ---
 const estadosInversion = ref([
   { nombre: "Activa", value: "activa" },
-  { nombre: "Actualizada", value: "finalizada" },
+  { nombre: "Finalizada", value: "finalizada" },
   { nombre: "Cancelada", value: "cancelada" },
 ]);
-const submitted = ref(false);
+
+// Computed para obtener los tipos de inversión y cuentas con el formato correcto
+const tiposInversion = computed(() => {
+  // Obtener desde el store de finanzas
+  const store = useFinanceStore();
+  return (store.investmentTypes || []).map(type => ({
+    nombre: type.name || type.nombre,
+    value: type.id || type.value
+  }));
+});
+
+const cuentas = computed(() => {
+  // Usar las cuentas pasadas como prop
+  return (props.accounts || []).map(account => ({
+    nombre: account.name || account.nombre,
+    value: account.id || account.value
+  }));
+});
 
 // --- VALIDACIONES ---
 const rules = {
@@ -230,50 +321,33 @@ const v$ = useVuelidate(rules, data);
 
 // --- WATCHERS ---
 watch(
-  () => props.inversionData,
+  () => props.investmentData,
   (newData) => {
     if (newData) {
-      // Buscar el objeto completo en tiposInversion y cuentas usando value
-      data.value.investment_type_id = Array.isArray(props.tiposInversion)
-        ? props.tiposInversion.find(
-            (t) => t.value == newData.investment_type_id
-          ) || null
-        : null;
-      data.value.account_id = Array.isArray(props.cuentas)
-        ? props.cuentas.find((c) => c.value == newData.account_id) || null
-        : null;
-      data.value.name = newData.name ?? "";
-      data.value.principal =
-        newData.principal !== undefined && newData.principal !== null
-          ? +newData.principal
-          : 0;
-      data.value.expected_return =
-        newData.expected_return !== undefined &&
-        newData.expected_return !== null
-          ? +newData.expected_return
-          : 0;
-      data.value.start_date = newData.start_date
-        ? new Date(newData.start_date)
-        : null;
-      data.value.end_date = newData.end_date
-        ? new Date(newData.end_date)
-        : null;
-      data.value.status = estadosInversion.value.find(
-        (s) => s.value === (newData.status || "activa")
-      ) || estadosInversion.value[0];
-      data.value.notes = newData.notes ?? "";
-      //data.value.id = newData.id ?? null;
+      data.value.investment_type_id = newData.investment_type_id || null;
+      data.value.account_id = newData.account_id || null;
+      data.value.name = newData.name || "";
+      data.value.principal = Number(newData.principal || newData.amount || 0);
+      data.value.expected_return = Number(newData.expected_return || 0);
+      data.value.start_date = newData.start_date ? new Date(newData.start_date) : null;
+      data.value.end_date = newData.end_date ? new Date(newData.end_date) : null;
+      data.value.status = newData.status || "activa";
+      data.value.notes = newData.notes || "";
+      data.value.id = newData.id || null;
     } else {
-      data.value.investment_type_id = null;
-      data.value.account_id = null;
-      data.value.name = "";
-      data.value.principal = 0;
-      data.value.expected_return = 0;
-      data.value.start_date = null;
-      data.value.end_date = null;
-      data.value.status = estadosInversion.value[0]; // Activa por defecto
-      data.value.notes = "";
-      //data.value.id = null;
+      // Resetear valores para nueva inversión
+      data.value = {
+        investment_type_id: null,
+        account_id: null,
+        name: "",
+        principal: 0,
+        expected_return: 0,
+        start_date: new Date(),
+        end_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 días después
+        status: "activa",
+        notes: "",
+        id: null,
+      };
     }
   },
   { immediate: true }
@@ -297,29 +371,37 @@ const formatCurrency = (value) => {
 const closeModal = () => {
   emit("update:visible", false);
   submitted.value = false;
+  v$.value.$reset();
 };
 
-const saveInversion = () => {
+const saveInversion = async () => {
   submitted.value = true;
-  if (v$.value.$invalid) {
-    v$.value.$touch();
+  saving.value = true;
+
+  // Validar antes de enviar
+  const isValid = await v$.value.$validate();
+  if (!isValid) {
+    saving.value = false;
     return;
   }
-  emit("save", {
-    investment_type_id: data.value.investment_type_id?.value ?? null,
+
+  const payload = {
+    investment_type_id: data.value.investment_type_id,
     name: data.value.name,
     principal: Number(data.value.principal),
     expected_return: Number(data.value.expected_return),
-    account_id: data.value.account_id?.value ?? null,
-    start_date: data.value.start_date
-      ? data.value.start_date.toISOString().slice(0, 10)
-      : null,
-    end_date: data.value.end_date
-      ? data.value.end_date.toISOString().slice(0, 10)
-      : null,
-    status: data.value.status?.value ?? "activa",
+    account_id: data.value.account_id,
+    start_date: data.value.start_date ? data.value.start_date.toISOString().slice(0, 10) : null,
+    end_date: data.value.end_date ? data.value.end_date.toISOString().slice(0, 10) : null,
+    status: data.value.status,
     notes: data.value.notes,
-    ...(data.value.id ? { id: data.value.id } : {}),
-  });
+  };
+
+  if (props.isEditMode && data.value.id) {
+    payload.id = data.value.id;
+  }
+
+  emit("save", payload);
+  saving.value = false;
 };
 </script>

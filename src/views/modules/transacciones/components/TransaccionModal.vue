@@ -9,12 +9,13 @@
 
       const props = defineProps({
         visible: Boolean,
-        transaccionToEdit: Object,
-        cuentas: Array,
-        categorias: Array // Cambio: ahora recibe un array de categorías del backend
+        transaction: Object, // Cambié de transaccionToEdit a transaction para consistencia
+        isEdit: Boolean,     // Agregué esta prop para saber si es edición
+        accounts: Array,     // Cambié de cuentas a accounts para consistencia
+        categories: Array    // Cambié de categorias a categories para consistencia
       });
 
-      const emit = defineEmits(['update:visible', 'save']);
+      const emit = defineEmits(['update:visible', 'saved']);
 
       const localTransaccion = ref({});
       const submitted = ref(false);
@@ -24,23 +25,23 @@
         if (isVisible) {
           submitted.value = false;
           // Si se está editando, convierte la fecha a un objeto Date si es necesario
-          if (props.transaccionToEdit) {
+          if (props.transaction && props.isEdit) {
               // Manejar la fecha correctamente
               let fechaEdit = new Date();
-              if (props.transaccionToEdit.date) {
-                  fechaEdit = new Date(props.transaccionToEdit.date + 'T00:00:00');
-              } else if (props.transaccionToEdit.fecha) {
-                  fechaEdit = new Date(props.transaccionToEdit.fecha + 'T00:00:00');
+              if (props.transaction.date) {
+                  fechaEdit = new Date(props.transaction.date + 'T00:00:00');
+              } else if (props.transaction.fecha) {
+                  fechaEdit = new Date(props.transaction.fecha + 'T00:00:00');
               }
               
               localTransaccion.value = {
-                  ...props.transaccionToEdit,
+                  ...props.transaction,
                   fecha: fechaEdit,
                   // Mapear campos del backend al frontend
-                  monto: Math.abs(parseFloat(props.transaccionToEdit.amount || props.transaccionToEdit.monto || 0)),
-                  descripcion: props.transaccionToEdit.description || props.transaccionToEdit.descripcion || '',
-                  cuentaId: parseInt(props.transaccionToEdit.account_id || props.transaccionToEdit.cuentaId),
-                  categoria: parseInt(props.transaccionToEdit.category_id || props.transaccionToEdit.categoria)
+                  monto: Math.abs(parseFloat(props.transaction.amount || props.transaction.monto || 0)),
+                  descripcion: props.transaction.description || props.transaction.descripcion || '',
+                  cuentaId: parseInt(props.transaction.account_id || props.transaction.cuentaId),
+                  categoria: parseInt(props.transaction.category_id || props.transaction.categoria)
               };
           } else {
               // Valores por defecto para una nueva transacción
@@ -57,13 +58,13 @@
 
       // Categorías a mostrar (todas, ya que el backend maneja la lógica)
       const categoriasDisponibles = computed(() => {
-        return props.categorias || [];
+        return props.categories || [];
       });
 
       // Filtrar solo cuentas de efectivo y banco
       const cuentasDisponibles = computed(() => {
-        if (!props.cuentas) return [];
-        return props.cuentas.filter(cuenta => {
+        if (!props.accounts) return [];
+        return props.accounts.filter(cuenta => {
           const tipo = cuenta.name?.toLowerCase() || cuenta.tipo?.toLowerCase() || '';
           return tipo.includes('efectivo') || tipo.includes('banco') || tipo.includes('cash') || tipo.includes('bank');
         });
@@ -80,14 +81,14 @@
       // Función para obtener el saldo disponible de la cuenta seleccionada
       const getSaldoDisponible = () => {
         if (!localTransaccion.value.cuentaId) return 0;
-        const cuenta = props.cuentas?.find(c => c.id === localTransaccion.value.cuentaId);
+        const cuenta = props.accounts?.find(c => c.id === localTransaccion.value.cuentaId);
         return cuenta?.balance || 0;
       };
 
       // Función para obtener el nombre de la cuenta seleccionada
       const getNombreCuentaSeleccionada = () => {
         if (!localTransaccion.value.cuentaId) return '';
-        const cuenta = props.cuentas?.find(c => c.id === localTransaccion.value.cuentaId);
+        const cuenta = props.accounts?.find(c => c.id === localTransaccion.value.cuentaId);
         return cuenta?.name || '';
       };
 
@@ -97,7 +98,7 @@
           return false;
         }
         
-        const categoria = props.categorias?.find(c => c.id === localTransaccion.value.categoria);
+        const categoria = props.categories?.find(c => c.id === localTransaccion.value.categoria);
         const esGasto = categoria?.type === 'gasto' || categoria?.tipo === 'gasto';
         
         if (!esGasto) return false;
@@ -179,13 +180,13 @@
 
         console.log('Datos a enviar:', transaccionData); // Para debug
 
-        emit('save', transaccionData);
+        emit('saved', transaccionData);
         closeModal();
       };
       </script>
 
       <template>
-        <Dialog :visible="visible" @update:visible="closeModal" modal :header="transaccionToEdit ? 'Editar Transacción' : 'Nueva Transacción'" :style="{width: '500px'}" class="p-fluid">
+        <Dialog :visible="visible" @update:visible="closeModal" modal :header="transaction ? 'Editar Transacción' : 'Nueva Transacción'" :style="{width: '500px'}" class="p-fluid">
           <div class="space-y-6 p-4">
             <!-- Card de saldo disponible -->
             <div v-if="localTransaccion.cuentaId" class="bg-blue-50 border border-blue-200 rounded-lg p-4">

@@ -1,8 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body{
-    background-color: #f1f5f9;
+@layer base {
+  * {
+    font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  body {
+    background-color: #E3EAF1;
+    color: #475259;
+  }
 }
 
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(135deg, #5A5BFF, #8505A6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
