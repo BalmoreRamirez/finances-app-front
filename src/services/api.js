@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const isDevelopment = import.meta.env.MODE === 'development';
 const baseURL = isDevelopment 
-    ? 'http://localhost:3006/'
+    ? 'http://localhost:3000/'
     : 'https://finances-app-back.onrender.com';
 
 const apiClient = axios.create({
@@ -17,6 +17,21 @@ const apiClient = axios.create({
 // Cache simple para peticiones GET
 const cache = new Map();
 const CACHE_TIME = 5 * 60 * 1000; // 5 minutos
+
+// Función para limpiar el estado de la aplicación cuando el token expire
+const clearAppState = () => {
+    // Limpiar localStorage
+    localStorage.removeItem('accessToken');
+    
+    // Limpiar cache de API
+    cache.clear();
+    
+    // Si hay stores de Pinia, podrían limpiarse aquí
+    // Por ejemplo: const { $reset } = useAuthStore();
+    // $reset();
+    
+    console.log('Estado de la aplicación limpiado por token expirado');
+};
 
 // Interceptor para añadir el token a las cabeceras de todas las peticiones
 apiClient.interceptors.request.use(config => {
@@ -52,6 +67,20 @@ apiClient.interceptors.response.use(response => {
     }
     return response;
 }, error => {
+    // Manejar token expirado o no autorizado
+    if (error.response?.status === 401) {
+        console.warn('Token expirado o inválido detectado');
+        
+        // Limpiar el estado de la aplicación
+        clearAppState();
+        
+        // Evitar redirecciones infinitas
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+            console.log('Redirigiendo al login...');
+            window.location.href = '/login';
+        }
+    }
+    
     return Promise.reject(error);
 });
 
@@ -96,3 +125,6 @@ export const apiRequest = async (config) => {
 };
 
 export default apiClient;
+
+// Exportar función de limpieza para uso externo si es necesario
+export { clearAppState };
