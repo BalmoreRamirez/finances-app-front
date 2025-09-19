@@ -57,7 +57,7 @@
         <div class="bg-background-white rounded-xl shadow-sm border border-neutral-100 p-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-text-muted mb-1">Ganancias Acumuladas</p>
+              <p class="text-sm text-text-muted mb-1">Ingresos por Intereses</p>
               <p class="text-2xl font-semibold text-secondary">{{ formatCurrency(totalGananciasAcumuladas) }}</p>
             </div>
             <div class="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center">
@@ -122,25 +122,25 @@
               <tr v-for="(inversion, idx) in filteredInvestments" :key="inversion.id" class="hover:bg-background-light transition-colors">
                 <td class="px-6 py-4 text-sm text-text-muted">{{ idx + 1 }}</td>
                 <td class="px-6 py-4">
-                  <div class="text-sm font-medium text-text-primary">{{ inversion.name }}</div>
+                  <div class="text-sm font-medium text-text-primary">{{ inversion.name || 'Sin nombre' }}</div>
                 </td>
                 <td class="px-6 py-4">
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                        :class="getTypeBadgeClass(inversion.type)">
-                    {{ getTypeLabel(inversion.type) }}
+                        :class="getTypeBadgeClass(inversion.investment_type || inversion.type)">
+                    {{ getTypeLabel(inversion.investment_type || inversion.type) }}
                   </span>
                 </td>
                 <td class="px-6 py-4 text-sm text-text-muted">
                   {{ getAccountName(inversion.account_id) }}
                 </td>
                 <td class="px-6 py-4 text-sm font-semibold text-text-primary text-right">
-                  {{ formatCurrency(inversion.amount) }}
+                  {{ formatCurrency(inversion.principal || inversion.amount || 0) }}
                 </td>
                 <td class="px-6 py-4 text-sm font-semibold text-success-500">
                   {{ formatCurrency(inversion.expected_return || 0) }}
                 </td>
                 <td class="px-6 py-4 text-center text-sm font-semibold text-secondary">
-                  {{ formatCurrency(inversion.total_paid || 0) }}
+                  {{ formatCurrency(getTotalPagado(inversion)) }}
                 </td>
                 <td class="px-6 py-4 text-center">
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
@@ -153,14 +153,26 @@
                     <button
                       @click="openEditModal(inversion)"
                       class="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                      title="Editar inversión"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
                     <button
+                      v-if="esTipoCredito(inversion)"
+                      @click="verDetallePagos(inversion)"
+                      class="p-2 text-secondary hover:bg-secondary/10 rounded-lg transition-colors"
+                      title="Ver pagos"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </button>
+                    <button
                       @click="confirmDelete(inversion.id)"
                       class="p-2 text-danger-500 hover:bg-danger-50 rounded-lg transition-colors"
+                      title="Eliminar inversión"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -206,6 +218,7 @@ import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { useFinanceStore } from "../../../../stores/financeStore.js";
 import { useInversionesStore } from "../../../../stores/investmentStore.js";
+import { useCuentasStore } from "../../../../stores/accountStore.js";
 import Button from "primevue/button";
 import ConfirmDialog from "primevue/confirmdialog";
 import Dropdown from "primevue/dropdown";
@@ -217,6 +230,7 @@ import Toast from "primevue/toast";
 // Stores y referencias
 const store = useFinanceStore();
 const investmentStore = useInversionesStore();
+const cuentasStore = useCuentasStore();
 const {
   deleteInvestment,
   addInvestment,
@@ -331,8 +345,27 @@ onMounted(async () => {
       }
     }
     
+    // Cargar cuentas completas para poder acceder a los balances
+    if (cuentasStore.cuentas.length === 0) {
+      try {
+        const result = await cuentasStore.fetchAccounts();
+        if (result && result.success === false) {
+          console.warn("No se pudieron cargar las cuentas completas:", result.error);
+        }
+      } catch (error) {
+        console.warn("Error al cargar cuentas completas:", error);
+      }
+    }
+    
     // Cargar pagos de créditos después de cargar las inversiones
     await cargarPagosCreditos();
+
+    // Debug temporal: Mostrar estructura de datos
+    console.log('=== DEBUG INVERSIONES ===');
+    console.log('Investments:', investments.value);
+    console.log('Investment Types:', investmentTypes.value);
+    console.log('Accounts:', accountForSelect.value);
+    console.log('========================');
   } catch (error) {
     console.error("Error al cargar datos iniciales:", error);
     toast.add({
@@ -363,10 +396,17 @@ const totalGananciasPotenciales = computed(() => {
 });
 
 const totalGananciasAcumuladas = computed(() => {
-  // Sumar solo las ganancias de inversiones finalizadas/completadas/pagadas
-  return (investments.value || [])
-    .filter(inv => ['finalizada', 'completado', 'pagado'].includes(inv.status) || ['finalizada', 'completado', 'pagado'].includes(inv.estado))
-    .reduce((sum, inv) => sum + parseFloat(inv.expected_return || 0), 0);
+  // Buscar cuentas que contengan "ingreso" e "interés" en el nombre
+  const cuentas = cuentasStore.cuentas || [];
+  const cuentasIngresoIntereses = cuentas.filter(cuenta => {
+    const nombre = (cuenta.name || '').toLowerCase();
+    return nombre.includes('ingreso') && (nombre.includes('interés') || nombre.includes('interes'));
+  });
+  
+  // Sumar el balance de todas las cuentas de ingreso por intereses
+  return cuentasIngresoIntereses.reduce((total, cuenta) => {
+    return total + parseFloat(cuenta.balance || 0);
+  }, 0);
 });
 
 // Helpers
@@ -539,7 +579,9 @@ const handleDeleteInversion = (id) => {
 
 // Funciones helper para el nuevo diseño minimalista
 const getTypeBadgeClass = (type) => {
-  const tipoStr = (type?.name || type || '').toLowerCase();
+  if (!type) return 'bg-neutral-100 text-neutral-600';
+
+  const tipoStr = (type?.name || type?.nombre || type || '').toLowerCase();
   if (tipoStr.includes('crédito') || tipoStr.includes('credito')) {
     return 'bg-primary/10 text-primary';
   }
@@ -551,8 +593,9 @@ const getTypeBadgeClass = (type) => {
 
 const getTypeLabel = (type) => {
   if (!type) return 'Sin tipo';
-  if (typeof type === 'object') return type.name || type.label || 'Sin tipo';
-  return type.charAt(0).toUpperCase() + type.slice(1);
+  if (typeof type === 'object') return type.name || type.nombre || type.label || 'Sin tipo';
+  if (typeof type === 'string') return type.charAt(0).toUpperCase() + type.slice(1);
+  return 'Sin tipo';
 };
 
 const getStatusBadgeClass = (status) => {
@@ -595,9 +638,60 @@ const getStatusLabel = (status) => {
   }
 };
 
+// Función para ver detalle de pagos (para créditos)
+const verDetallePagos = (inversion) => {
+  // Navegar a la vista de detalle de crédito
+  router.push({
+    name: 'detalle-credito',
+    params: { id: inversion.id }
+  });
+};
+
 const getAccountName = (accountId) => {
-  const account = accountsList.value.find(acc => acc.id === accountId);
-  return account?.name || account?.label || 'Sin cuenta';
+  if (!accountId) return 'Sin cuenta';
+  const account = accountsList.value.find(acc => acc.id === accountId || acc.value === accountId);
+  return account?.name || account?.nombre || account?.label || 'Cuenta no encontrada';
+};
+
+// Corregir los computed de totales para usar los campos correctos
+const totalInvertidoCorregido = computed(() => {
+  return (investments.value || [])
+    .filter(inv => (inv.status || inv.estado || '').toLowerCase() === 'activa')
+    .reduce((sum, inv) => {
+      const monto = parseFloat(inv.principal || inv.amount || inv.monto || 0);
+      return sum + monto;
+    }, 0);
+});
+
+const totalGananciasPotencialesCorregido = computed(() => {
+  return (investments.value || [])
+    .filter(inv => (inv.status || inv.estado || '').toLowerCase() === 'activa')
+    .reduce((sum, inv) => {
+      const ganancia = parseFloat(inv.expected_return || inv.ganancia_esperada || 0);
+      return sum + ganancia;
+    }, 0);
+});
+
+const totalGananciasAcumuladasCorregido = computed(() => {
+  return (investments.value || [])
+    .filter(inv => {
+      const estado = (inv.status || inv.estado || '').toLowerCase();
+      return ['finalizada', 'completado', 'pagado'].includes(estado);
+    })
+    .reduce((sum, inv) => {
+      const ganancia = parseFloat(inv.expected_return || inv.ganancia_esperada || 0);
+      return sum + ganancia;
+    }, 0);
+});
+
+// Función para verificar si es tipo crédito - CORREGIDA
+const esTipoCreditoCorregido = (inversion) => {
+  const tipo = (inversion.investment_type?.name ||
+                inversion.investment_type?.nombre ||
+                inversion.tipo?.name ||
+                inversion.tipo?.nombre ||
+                inversion.tipo || '').toString().toLowerCase();
+  return tipo.includes('crédito') || tipo.includes('credito');
 };
 
 // Alias para mantener compatibilidad

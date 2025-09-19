@@ -359,7 +359,7 @@ const cuentasEfectivoYBanco = computed(() => {
   if (!accounts.value) return [];
   return accounts.value.filter(cuenta => {
     const tipo = cuenta.name?.toLowerCase() || cuenta.tipo?.toLowerCase() || '';
-    return tipo.includes('efectivo') || tipo.includes('banco') || tipo.includes('cash') || tipo.includes('bank');
+    return tipo.includes('efectivo') || tipo.includes('banco') || tipo.includes('ingreso por interés') || tipo.includes('cash') || tipo.includes('bank');
   });
 });
 
