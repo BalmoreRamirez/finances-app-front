@@ -91,9 +91,14 @@ export const useInversionesStore = defineStore("inversiones", {
     },
     async addInvestment(inversionData) {
       try {
-        await investmentsService.createInvestment(inversionData);
-        await this.fetchInvestments();
-        return { success: true, message: "Inversión creada correctamente" };
+        const response = await investmentsService.createInvestment(inversionData);
+        
+        // Actualizar el estado reactivamente
+        if (response.data) {
+          this.investments.push(response.data);
+        }
+        
+        return { success: true, message: "Inversión creada correctamente", data: response.data };
       } catch (error) {
         console.error("Error al crear la inversión:", error);
         return { 
@@ -105,9 +110,17 @@ export const useInversionesStore = defineStore("inversiones", {
     },
     async updateInvestment(inversionId, inversionData) {
       try {
-        await investmentsService.updateInvestment(inversionId, inversionData);
-        await this.fetchInvestments();
-        return { success: true, message: "Inversión actualizada correctamente" };
+        const response = await investmentsService.updateInvestment(inversionId, inversionData);
+        
+        // Actualizar el estado reactivamente
+        if (response.data) {
+          const index = this.investments.findIndex(inv => inv.id === inversionId);
+          if (index !== -1) {
+            this.investments[index] = response.data;
+          }
+        }
+        
+        return { success: true, message: "Inversión actualizada correctamente", data: response.data };
       } catch (error) {
         console.error("Error al actualizar la inversión:", error);
         return { 
@@ -119,7 +132,10 @@ export const useInversionesStore = defineStore("inversiones", {
     async deleteInvestment(inversionId) {
       try {
         await investmentsService.deleteInvestment(inversionId);
-        await this.fetchInvestments();
+        
+        // Actualizar el estado reactivamente
+        this.investments = this.investments.filter(inv => inv.id !== inversionId);
+        
         return { success: true, message: "Inversión eliminada correctamente" };
       } catch (error) {
         console.error("Error al eliminar la inversión:", error);
@@ -162,9 +178,14 @@ export const useInversionesStore = defineStore("inversiones", {
     async addPayment(pagoData) {
       try {
         const investmentId = pagoData.investment_id;
-        await investmentsService.addPayment(investmentId, pagoData);
-        await this.fetchPaymentsByInvestment(investmentId);
-        return { success: true, message: "Pago registrado correctamente" };
+        const response = await investmentsService.addPayment(investmentId, pagoData);
+        
+        // Actualizar el estado reactivamente
+        if (response.data) {
+          this.payments.push(response.data);
+        }
+        
+        return { success: true, message: "Pago registrado correctamente", data: response.data };
       } catch (error) {
         console.error("Error al agregar el pago:", error);
         return { 
@@ -176,7 +197,10 @@ export const useInversionesStore = defineStore("inversiones", {
     async deletePayment(investmentId, paymentId) {
       try {
         await investmentsService.deletePayment(investmentId, paymentId);
-        await this.fetchPaymentsByInvestment(investmentId);
+        
+        // Actualizar el estado reactivamente
+        this.payments = this.payments.filter(payment => payment.id !== paymentId);
+        
         return { success: true, message: "Pago eliminado correctamente" };
       } catch (error) {
         console.error("Error al eliminar el pago:", error);

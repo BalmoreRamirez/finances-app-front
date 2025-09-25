@@ -156,7 +156,12 @@ export const useTransaccionesStore = defineStore('transacciones', {
         console.log('Datos a enviar:', backendData); // Para debug
 
         const response = await transactionsService.createTransaction(backendData);
-        await this.fetchTransactions(); // Recargar las transacciones
+        
+        // Actualizar el estado reactivamente en lugar de hacer fetch completo
+        if (response.data) {
+          this.transactions.unshift(response.data); // Agregar al principio del array
+        }
+        
         return { success: true, data: response.data };
       } catch (error) {
         console.error('Error creating transaction:', error);
@@ -179,7 +184,15 @@ export const useTransaccionesStore = defineStore('transacciones', {
         };
 
         const response = await transactionsService.updateTransaction(transaccionActualizada.id, backendData);
-        await this.fetchTransactions(); // Recargar las transacciones
+        
+        // Actualizar el estado reactivamente
+        if (response.data) {
+          const index = this.transactions.findIndex(t => t.id === transaccionActualizada.id);
+          if (index !== -1) {
+            this.transactions[index] = response.data;
+          }
+        }
+        
         return { success: true, data: response.data };
       } catch (error) {
         console.error('Error updating transaction:', error);
@@ -192,8 +205,12 @@ export const useTransaccionesStore = defineStore('transacciones', {
 
     async deleteTransaccion(transaccion) {
       try {
-        await transactionsService.deleteTransaction(transaccion.id);
-        await this.fetchTransactions(); // Recargar las transacciones
+        const transaccionId = transaccion.id || transaccion;
+        await transactionsService.deleteTransaction(transaccionId);
+        
+        // Actualizar el estado reactivamente
+        this.transactions = this.transactions.filter(t => t.id !== transaccionId);
+        
         return { success: true };
       } catch (error) {
         console.error('Error deleting transaction:', error);

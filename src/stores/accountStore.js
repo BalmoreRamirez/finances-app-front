@@ -104,7 +104,14 @@ export const useCuentasStore = defineStore("cuentas", {
       try {
         const response = await cuentasService.createAccount(payload);
         if (response.data) {
-          await this.fetchAccounts();
+          // Actualizar el estado reactivamente
+          this.cuentas.push(response.data);
+          // También actualizar accountsForSelect
+          this.accountsForSelect.push({
+            nombre: response.data.name,
+            value: response.data.id,
+          });
+          
           const notifications = this._initNotifications();
           notifications.showSuccess("Éxito", "Cuenta creada correctamente");
           return true;
@@ -123,7 +130,21 @@ export const useCuentasStore = defineStore("cuentas", {
         const { accountId, ...data } = payload;
         const response = await cuentasService.updateAccount(accountId, data);
         if (response.data) {
-          await this.fetchAccounts();
+          // Actualizar el estado reactivamente
+          const index = this.cuentas.findIndex(cuenta => cuenta.id === accountId);
+          if (index !== -1) {
+            this.cuentas[index] = response.data;
+          }
+          
+          // También actualizar accountsForSelect
+          const selectIndex = this.accountsForSelect.findIndex(account => account.value === accountId);
+          if (selectIndex !== -1) {
+            this.accountsForSelect[selectIndex] = {
+              nombre: response.data.name,
+              value: response.data.id,
+            };
+          }
+          
           const notifications = this._initNotifications();
           notifications.showSuccess("Éxito", "Cuenta actualizada correctamente");
           return true;
@@ -141,7 +162,11 @@ export const useCuentasStore = defineStore("cuentas", {
       try {
         const response = await cuentasService.deleteAccount(accountId);
         if (response.data) {
-          await this.fetchAccounts();
+          // Actualizar el estado reactivamente
+          this.cuentas = this.cuentas.filter(cuenta => cuenta.id !== accountId);
+          // También actualizar accountsForSelect
+          this.accountsForSelect = this.accountsForSelect.filter(account => account.value !== accountId);
+          
           const notifications = this._initNotifications();
           notifications.showSuccess("Éxito", "Cuenta eliminada correctamente");
           return true;
