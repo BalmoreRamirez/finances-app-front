@@ -6,7 +6,7 @@ import { useNotifications } from '../composables/useNotifications';
 function extractErrorMessage(error, defaultMessage = "Ha ocurrido un error") {
   if (error?.response?.data) {
     const errorData = error.response.data;
-    
+
     // Si el backend devuelve un mensaje de error específico
     if (errorData.message) {
       // Si es un array de mensajes, unirlos
@@ -53,7 +53,7 @@ function extractErrorMessage(error, defaultMessage = "Ha ocurrido un error") {
   else if (error?.response?.status === 403) {
     return "Acceso denegado.";
   }
-  
+
   return defaultMessage;
 }
 
@@ -70,7 +70,7 @@ export const useTransaccionesStore = defineStore('transacciones', {
         // Buscar la categoría para determinar el tipo
         const categoria = state.categories.find(c => c.id === t.category_id);
         const tipo = categoria?.type || 'gasto'; // Default a gasto si no se encuentra
-        
+
         return {
           ...t,
           tipo: tipo
@@ -101,8 +101,8 @@ export const useTransaccionesStore = defineStore('transacciones', {
         console.error('Error fetching transactions:', error);
         const notifications = useNotifications();
         notifications.handleBackendError(error, "Error al cargar las transacciones");
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: extractErrorMessage(error, "Error al cargar las transacciones")
         };
       } finally {
@@ -119,8 +119,8 @@ export const useTransaccionesStore = defineStore('transacciones', {
         console.error('Error fetching categories:', error);
         const notifications = useNotifications();
         notifications.handleBackendError(error, "Error al cargar las categorías");
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: extractErrorMessage(error, "Error al cargar las categorías")
         };
       }
@@ -135,8 +135,8 @@ export const useTransaccionesStore = defineStore('transacciones', {
         console.error('Error fetching accounts:', error);
         const notifications = useNotifications();
         notifications.handleBackendError(error, "Error al cargar las cuentas");
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: extractErrorMessage(error, "Error al cargar las cuentas")
         };
       }
@@ -156,17 +156,17 @@ export const useTransaccionesStore = defineStore('transacciones', {
         console.log('Datos a enviar:', backendData); // Para debug
 
         const response = await transactionsService.createTransaction(backendData);
-        
+
         // Actualizar el estado reactivamente en lugar de hacer fetch completo
         if (response.data) {
           this.transactions.unshift(response.data); // Agregar al principio del array
         }
-        
+
         return { success: true, data: response.data };
       } catch (error) {
         console.error('Error creating transaction:', error);
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: extractErrorMessage(error, "Error al crear la transacción")
         };
       }
@@ -184,7 +184,7 @@ export const useTransaccionesStore = defineStore('transacciones', {
         };
 
         const response = await transactionsService.updateTransaction(transaccionActualizada.id, backendData);
-        
+
         // Actualizar el estado reactivamente
         if (response.data) {
           const index = this.transactions.findIndex(t => t.id === transaccionActualizada.id);
@@ -192,12 +192,12 @@ export const useTransaccionesStore = defineStore('transacciones', {
             this.transactions[index] = response.data;
           }
         }
-        
+
         return { success: true, data: response.data };
       } catch (error) {
         console.error('Error updating transaction:', error);
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: extractErrorMessage(error, "Error al actualizar la transacción")
         };
       }
@@ -207,15 +207,15 @@ export const useTransaccionesStore = defineStore('transacciones', {
       try {
         const transaccionId = transaccion.id || transaccion;
         await transactionsService.deleteTransaction(transaccionId);
-        
+
         // Actualizar el estado reactivamente
         this.transactions = this.transactions.filter(t => t.id !== transaccionId);
-        
+
         return { success: true };
       } catch (error) {
         console.error('Error deleting transaction:', error);
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: extractErrorMessage(error, "Error al eliminar la transacción")
         };
       }
