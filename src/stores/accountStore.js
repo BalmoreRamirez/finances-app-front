@@ -11,6 +11,20 @@ export const useCuentasStore = defineStore("cuentas", {
   }),
 
   getters: {
+    // Obtener todas las cuentas ordenadas por más recientes primero
+    cuentasOrdenadas: (state) => {
+      return [...state.cuentas].sort((a, b) => {
+        // Ordenar por created_at si existe, sino por id (más reciente primero)
+        const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
+        const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
+        if (dateA.getTime() !== dateB.getTime()) {
+          return dateB - dateA; // Más reciente primero
+        }
+        // Si las fechas son iguales o no existen, ordenar por id descendente
+        return (b.id || 0) - (a.id || 0);
+      });
+    },
+
     // Obtener cuentas de efectivo y banco
     cuentasEfectivoYBanco: (state) => {
       return state.cuentas.filter(cuenta => 
@@ -68,7 +82,15 @@ export const useCuentasStore = defineStore("cuentas", {
     async fetchAccounts() {
       try {
         const response = await cuentasService.getAccounts();
-        this.cuentas = response.data;
+        // Ordenar por más recientes al cargar inicialmente
+        this.cuentas = (response.data || []).sort((a, b) => {
+          const dateA = new Date(a.created_at || 0);
+          const dateB = new Date(b.created_at || 0);
+          if (dateA.getTime() !== dateB.getTime()) {
+            return dateB - dateA; // Más reciente primero
+          }
+          return (b.id || 0) - (a.id || 0); // Por id descendente si no hay fecha
+        });
         return { success: true };
       } catch (error) {
         const notifications = this._initNotifications();
@@ -104,10 +126,10 @@ export const useCuentasStore = defineStore("cuentas", {
       try {
         const response = await cuentasService.createAccount(payload);
         if (response.data) {
-          // Actualizar el estado reactivamente
-          this.cuentas.push(response.data);
+          // Actualizar el estado reactivamente (insertar al inicio para mantener orden)
+          this.cuentas.unshift(response.data);
           // También actualizar accountsForSelect
-          this.accountsForSelect.push({
+          this.accountsForSelect.unshift({
             nombre: response.data.name,
             value: response.data.id,
           });

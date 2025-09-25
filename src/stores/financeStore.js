@@ -6,11 +6,11 @@ import { useTransaccionesStore as useTransactionsStore } from "./transactionStor
 export const useFinanceStore = defineStore("finance", {
   getters: {
     // accounts
-    accounts: () => useAccountsStore().cuentas,
+    accounts: () => useAccountsStore().cuentasOrdenadas || useAccountsStore().cuentas,
     accountForSelect: () => useAccountsStore().accountsForSelect,
     accountTypes: () => useAccountsStore().tiposCuenta,
     // investments
-    investments: () => useInvestmentsStore().investments,
+    investments: () => useInvestmentsStore().inversionesOrdenadas || useInvestmentsStore().investments,
     investmentTypes: () => useInvestmentsStore().typesInvestment,
     // -----
     payments: () => useInvestmentsStore().payments,

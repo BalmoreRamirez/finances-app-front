@@ -59,11 +59,50 @@ export const useInversionesStore = defineStore("inversiones", {
     payments: [],
     currentInvestment: null,
   }),
+  getters: {
+    // Obtener todas las inversiones ordenadas por más recientes primero
+    inversionesOrdenadas: (state) => {
+      return [...state.investments].sort((a, b) => {
+        // Ordenar por created_at si existe, sino por id (más reciente primero)
+        const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
+        const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
+        if (dateA.getTime() !== dateB.getTime()) {
+          return dateB - dateA; // Más reciente primero
+        }
+        // Si las fechas son iguales o no existen, ordenar por id descendente
+        return (b.id || 0) - (a.id || 0);
+      });
+    },
+
+    // Obtener todos los pagos ordenados por más recientes primero
+    pagosOrdenados: (state) => {
+      return [...state.payments].sort((a, b) => {
+        // Ordenar por fecha de pago si existe, sino por created_at, sino por id
+        const dateA = a.payment_date ? new Date(a.payment_date) : 
+                     (a.created_at ? new Date(a.created_at) : new Date(0));
+        const dateB = b.payment_date ? new Date(b.payment_date) : 
+                     (b.created_at ? new Date(b.created_at) : new Date(0));
+        if (dateA.getTime() !== dateB.getTime()) {
+          return dateB - dateA; // Más reciente primero
+        }
+        // Si las fechas son iguales o no existen, ordenar por id descendente
+        return (b.id || 0) - (a.id || 0);
+      });
+    }
+  },
   actions: {
     async fetchInvestments() {
       try {
         const response = await investmentsService.getInvestments();
-        this.investments = response.data;
+        // Ordenar por más recientes al cargar inicialmente
+        this.investments = (response.data || []).sort((a, b) => {
+          const dateA = new Date(a.created_at || 0);
+          const dateB = new Date(b.created_at || 0);
+          if (dateA.getTime() !== dateB.getTime()) {
+            return dateB - dateA; // Más reciente primero
+          }
+          return (b.id || 0) - (a.id || 0); // Por id descendente si no hay fecha
+        });
         return { success: true };
       } catch (error) {
         console.error("Error al obtener las inversiones:", error);
@@ -93,9 +132,9 @@ export const useInversionesStore = defineStore("inversiones", {
       try {
         const response = await investmentsService.createInvestment(inversionData);
         
-        // Actualizar el estado reactivamente
+        // Actualizar el estado reactivamente (insertar al inicio para mantener orden)
         if (response.data) {
-          this.investments.push(response.data);
+          this.investments.unshift(response.data);
         }
         
         return { success: true, message: "Inversión creada correctamente", data: response.data };
@@ -180,9 +219,9 @@ export const useInversionesStore = defineStore("inversiones", {
         const investmentId = pagoData.investment_id;
         const response = await investmentsService.addPayment(investmentId, pagoData);
         
-        // Actualizar el estado reactivamente
+        // Actualizar el estado reactivamente (insertar al inicio para mantener orden)
         if (response.data) {
-          this.payments.push(response.data);
+          this.payments.unshift(response.data);
         }
         
         return { success: true, message: "Pago registrado correctamente", data: response.data };

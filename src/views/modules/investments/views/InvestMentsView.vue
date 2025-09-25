@@ -234,7 +234,7 @@ const dataInvestment = computed(() =>
         .map((investment) => ({
           id: investment.id,
           name: investment.name || investment.nombre || "-",
-          type: investment.investment_type?.name || "-",
+          type: investment.investment_type?.name || nameType(investment.investment_type_id) || "-",
           account: getAccountName(investment.cuenta_id),
           amount_invested: parseFloat(investment.principal || 0),
           profit: parseFloat(investment.expected_return || 0),
@@ -256,6 +256,10 @@ const totalGananciasPotenciales = computed(() => {
       .reduce((sum, inv) => sum + parseFloat(inv.expected_return || 0), 0);
 });
 
+const nameType = (typeId) => {
+  const tipo = investmentStore.typesInvestment.find(t => t.id === typeId || t.value === typeId);
+  return tipo ? tipo.name || tipo.label : typeId || 'No Asignado';
+};
 const totalGananciasAcumuladas = computed(() => {
   const cuentas = cuentasStore.cuentas || [];
   const cuentasIngresoIntereses = cuentas.filter(cuenta => {

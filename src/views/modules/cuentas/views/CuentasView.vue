@@ -85,7 +85,9 @@ onMounted(() => {
 
 // Computed
 const cuentasDeBalance = computed(() => {
-  return accounts.value.map((cuenta) => ({
+  // Usar el getter ordenado del store
+  const cuentasOrdenadas = store.accounts || [];
+  return cuentasOrdenadas.map((cuenta) => ({
     id: cuenta.id ?? null,
     name: cuenta.name ?? "Sin nombre",
     type: cuenta.account_type?.name || "No Asignado",

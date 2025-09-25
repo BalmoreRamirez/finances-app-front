@@ -95,7 +95,12 @@ export const useTransaccionesStore = defineStore('transacciones', {
       try {
         this.isLoading = true;
         const response = await transactionsService.getTransactions();
-        this.transactions = response.data;
+        // Ordenar por fecha más reciente al cargar inicialmente
+        this.transactions = (response.data || []).sort((a, b) => {
+          const dateA = new Date(a.date || a.created_at || 0);
+          const dateB = new Date(b.date || b.created_at || 0);
+          return dateB - dateA; // Más reciente primero
+        });
         return { success: true };
       } catch (error) {
         console.error('Error fetching transactions:', error);
