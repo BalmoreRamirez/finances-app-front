@@ -95,7 +95,7 @@
       <div class="card">
         <DataTable :value="dataInvestment"
                    paginator
-                   :rows="5"
+                   :rows="7"
 
                    tableStyle="min-width: 50rem">
           <Column field="id" header="ID"></Column>

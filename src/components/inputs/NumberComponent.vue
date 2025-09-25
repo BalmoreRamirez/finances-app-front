@@ -14,7 +14,8 @@
                    :max="maxValue"
                    
                    @input="$emit('update:modelValue', $event.value === null ? 0 : props.maxValue && $event.value > props.maxValue ? props.maxValue : $event.value)"/>
-    <label class="pl-2" :class="props.errors?.length >  0 ? 'text-danger-700' : 'text-primary-700'"
+    <label class="pl-2 pr-3 align-middle text-[11px] sm:text-[13px] truncate max-w-full"
+           :class="props.errors?.length >  0 ? 'text-danger-700' : 'text-primary-700'"
            :for="item">{{ placeholder }}</label>
 </span>
     <p class="text-xs text-danger-500 px-2 my-2">

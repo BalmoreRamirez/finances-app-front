@@ -2,8 +2,8 @@
   <Dialog
     :visible="visible"
     modal
-    header="Cuenta"
-    :style="{ width: '400px' }"
+    :header="isEditMode ? 'Editar cuenta' : 'Agregar cuenta'"
+    :style="{ width: '600px' }"
     @update:visible="closeModal"
   >
     <div class="space-y-6 p-4">
@@ -22,26 +22,28 @@
           :errors="v$.account_type_id.$errors"
           :items="tiposCuenta"
           optionLabel="nombre"
+          optionValue="value"
           placeholder="Selecciona un tipo de cuenta"
         />
       </div>
       <div class="mb-4">
-        <Number
-          v-model="v$.balance.$model"
-          :class="{ 'p-invalid': v$.balance.$error }"
+        <Input
+          v-model="stringBalance"
+          :errors="v$.balance.$errors"
+          placeholder="Balance"
         />
       </div>
       <div class="mb-4">
         <Input
           v-model="v$.currency.$model"
-          :errors="v$.currency.$error"
+          :errors="v$.currency.$errors"
           placeholder="Ingrese la moneda"
         />
       </div>
        <div class="mb-4">
         <Input
           v-model="v$.description.$model"
-          :errors="v$.description.$error"
+          :errors="v$.description.$errors"
           placeholder="Description"
         />
       </div>
@@ -54,7 +56,15 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
+// Computed para balance como string
+const stringBalance = computed({
+  get: () => data.value.balance != null ? String(data.value.balance) : "",
+  set: val => {
+    // Convierte a número si es posible, si no, deja 0
+    data.value.balance = val === "" ? 0 : Number(val);
+  }
+});
 import { helpers, required } from "@vuelidate/validators";
 import useVuelidate from "@vuelidate/core";
 import Dialog from "primevue/dialog";
@@ -69,7 +79,11 @@ const props = defineProps({
 const emit = defineEmits(["update:visible", "save"]);
 
 const submitted = ref(false);
-
+const dollarRegex = /^\$?(\d{1,3})(,(\d{3}))*(\.\d{2})?$/;
+const isDollar = helpers.withMessage(
+  "El saldo debe ser un número válido en formato de dólar.",
+  value => dollarRegex.test(value)
+);
 const data = ref({
   name: "",
   account_type_id: null,
@@ -83,13 +97,11 @@ const rules = {
     required: helpers.withMessage("El nombre es obligatorio.", required),
   },
   account_type_id: {
-    required: helpers.withMessage(
-      "El tipo de cuenta es obligatorio.",
-      required
-    ),
+    required: helpers.withMessage( "El tipo de cuenta es obligatorio.", required),
   },
   balance: {
     required: helpers.withMessage("El saldo es obligatorio.", required),
+    isDollar,
   },
   currency: {
     required: helpers.withMessage("La moneda es obligatoria.", required),
@@ -101,29 +113,43 @@ const rules = {
 
 const v$ = useVuelidate(rules, data);
 
+// Watch para manejar los datos del modal
 watch(
-  () => props.cuentaData,
-  (newData) => {
-    if (newData) {
-      data.value.name = newData.name || "";
-      data.value.account_type_id =
-        props.tiposCuenta.find(
-          (t) =>
-            t.value ===
-            (newData.account_type_id?.value || newData.account_type_id)
-        ) || null;
-      data.value.balance =
-        newData.balance !== undefined && newData.balance !== null
-          ? Number(newData.balance)
-          : 0;
-      data.value.currency = newData.currency || "USD";
+  () => [props.visible, props.cuentaData, props.isEditMode],
+  ([visible, newData, isEdit]) => {
+    if (visible) {
+      if (isEdit && newData) {
+        // Modo edición - cargar datos existentes
+        console.log("Datos recibidos para edición:", newData);
+        data.value.name = newData.name || "";
+        data.value.account_type_id = newData.account_type_id || null;
+        data.value.balance = newData.balance !== undefined ? Number(newData.balance) : 0;
+        data.value.currency = newData.currency || "USD";
+        data.value.description = newData.description || "";
+        console.log("account_type_id asignado:", data.value.account_type_id);
+      } else {
+        // Modo crear - resetear formulario
+        resetForm();
+      }
     }
   },
   { immediate: true }
 );
+const resetForm = () => {
+  data.value = {
+    name: "",
+    account_type_id: null,
+    balance: 0,
+    currency: "USD",
+    description: "",
+  };
+  submitted.value = false;
+  v$.value.$reset();
+};
+
 const closeModal = () => {
   emit("update:visible", false);
-  submitted.value = false;
+  resetForm();
 };
 
 const saveCuenta = () => {
@@ -132,17 +158,33 @@ const saveCuenta = () => {
     v$.value.$touch();
     return;
   }
-  const payload = {
-    name: data.value.name,
-    account_type_id: data.value.account_type_id.value,
-    balance: data.value.balance,
-    currency: data.value.currency,
-    description: data.value.description,
-  };
-  if (props.cuentaData && props.cuentaData.accountId) {
-    payload.accountId = props.cuentaData.accountId;
+  
+  // Separar lógica para crear y editar
+  if (props.isEditMode) {
+    // Modo edición
+    const payload = {
+      accountId: props.cuentaData.accountId,
+      name: data.value.name,
+      account_type_id: data.value.account_type_id,
+      balance: parseInt(data.value.balance),
+      currency: data.value.currency,
+      description: data.value.description,
+    };
+    emit("save", payload);
+  } else {
+    // Modo crear
+    const payload = {
+      name: data.value.name,
+      account_type_id: data.value.account_type_id,
+      balance: parseInt(data.value.balance),
+      currency: data.value.currency,
+      description: data.value.description,
+    };
+    emit("save", payload);
   }
-  emit("save", payload);
+  
   closeModal();
 };
+
+
 </script>
