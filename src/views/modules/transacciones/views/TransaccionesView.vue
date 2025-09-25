@@ -1,21 +1,14 @@
 <template>
   <div class="min-h-screen bg-background">
     <Toast />
-    <ConfirmDialog/>
+    <ConfirmDialog />
 
     <!-- Header -->
     <header class="bg-background-white border-b border-neutral-200 px-6 py-6">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-semibold text-text-primary">Registro de Transacciones</h1>
-        <button
-          @click="openCreateModal"
-          class="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
-        >
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
-          Agregar Transacción
-        </button>
+        <Button @click="openCreateModal" label="Agregar Transacción" icon="pi pi-plus"
+          class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors" />
       </div>
     </header>
 
@@ -23,15 +16,11 @@
     <div class="container mx-auto px-6 py-8 space-y-8">
       <!-- Cards de cuentas con saldos -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        <div
-          v-for="cuenta in cuentasEfectivoYBanco"
-          :key="cuenta.id"
-          class="bg-background-white rounded-xl shadow-sm border border-neutral-100 p-6 hover:shadow-md transition-shadow"
-        >
+        <div v-for="cuenta in cuentasEfectivoYBanco" :key="cuenta.id"
+          class="bg-background-white rounded-xl shadow-sm border border-neutral-100 p-6 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between">
             <div class="flex items-center">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center"
-                   :class="getTipoIconClass(cuenta)">
+              <div class="w-12 h-12 rounded-lg flex items-center justify-center" :class="getTipoIconClass(cuenta)">
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                   <path :d="getIconPath(cuenta)" />
                 </svg>
@@ -50,177 +39,130 @@
         </div>
       </div>
 
-      <!-- Tabla de transacciones -->
-      <div class="bg-background-white rounded-xl shadow-sm border border-neutral-100 overflow-hidden">
-        <div class="px-6 py-4 border-b border-neutral-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h2 class="text-lg font-semibold text-text-primary">Historial de Transacciones</h2>
-          <div class="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
-            <div class="flex items-center space-x-2">
-              <label class="text-sm font-medium text-text-muted">Categoría:</label>
-              <Dropdown
-                v-model="filtroCategoria"
-                :options="categoriasFiltro"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Todas las categorías"
-                class="w-48"
-                showClear
-              />
+      <!-- DataTable de transacciones -->
+      <div class="card">
+        <DataTable :value="filteredTransactions" :loading="isLoading" paginator :rows="10" sortMode="multiple"
+          removableSort :globalFilterFields="['description', 'descripcion']" tableStyle="min-width: 50rem"
+          class="p-datatable-sm">
+          <template #header>
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4">
+              <h2 class="text-lg font-semibold text-text-primary">Historial de Transacciones</h2>
+              <div class="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+                <div class="flex items-center space-x-2">
+                  <label class="text-sm font-medium text-text-muted">Buscar:</label>
+                  <InputText v-model="globalFilter" placeholder="Buscar transacciones..." class="w-64" />
+                </div>
+                <div class="flex items-center space-x-2">
+                  <label class="text-sm font-medium text-text-muted">Categoría:</label>
+                  <Dropdown v-model="filtroCategoria" :options="categoriasFiltro" optionLabel="label"
+                    optionValue="value" placeholder="Todas las categorías" class="w-48" showClear />
+                </div>
+                <div class="flex items-center space-x-2">
+                  <label class="text-sm font-medium text-text-muted">Cuenta:</label>
+                  <Dropdown v-model="filtroCuenta" :options="cuentasFiltro" optionLabel="label" optionValue="value"
+                    placeholder="Todas las cuentas" class="w-48" showClear />
+                </div>
+              </div>
             </div>
-            <div class="flex items-center space-x-2">
-              <label class="text-sm font-medium text-text-muted">Cuenta:</label>
-              <Dropdown
-                v-model="filtroCuenta"
-                :options="cuentasFiltro"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Todas las cuentas"
-                class="w-48"
-                showClear
-              />
+          </template>
+
+          <template #empty>
+            <div class="flex flex-col items-center py-12">
+              <i class="pi pi-inbox text-4xl text-neutral-300 mb-4"></i>
+              <p class="text-lg font-medium mb-1 text-text-muted">No hay transacciones</p>
+              <p class="text-sm text-text-muted">Registra tu primera transacción para comenzar</p>
             </div>
-          </div>
-        </div>
+          </template>
 
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-neutral-100">
-            <thead class="bg-background-light">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Fecha</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Descripción</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Categoría</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Cuenta</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Monto</th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-text-muted uppercase tracking-wider">Acciones</th>
-              </tr>
-            </thead>
-            <tbody class="bg-background-white divide-y divide-neutral-50">
-              <tr v-for="transaction in paginatedTransactions" :key="transaction.id" class="hover:bg-background-light transition-colors">
-                <td class="px-6 py-4 text-sm text-text-primary">
-                  {{ formatDate(transaction.date || transaction.fecha) }}
-                </td>
-                <td class="px-6 py-4 text-sm font-medium text-text-primary">
-                  {{ transaction.description || transaction.descripcion }}
-                </td>
-                <td class="px-6 py-4 text-sm">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                        :class="getCategoryBadgeClass(transaction)">
-                    {{ getCategoryName(transaction.category_id || transaction.categoria_id) }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 text-sm text-text-muted">
-                  {{ getAccountName(transaction.account_id || transaction.cuenta_id) }}
-                </td>
-                <td class="px-6 py-4 text-sm font-semibold"
-                    :class="getAmountColor(transaction)">
-                  {{ formatAmount(transaction) }}
-                </td>
-                <td class="px-6 py-4 text-center">
-                  <div class="flex items-center justify-center space-x-2">
-                    <button
-                      @click="openEditModal(transaction)"
-                      class="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                    <button
-                      @click="confirmDelete(transaction.id)"
-                      class="p-2 text-danger-500 hover:bg-danger-50 rounded-lg transition-colors"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="paginatedTransactions.length === 0">
-                <td colspan="6" class="px-6 py-8 text-center text-text-muted">
-                  <div class="flex flex-col items-center">
-                    <svg class="w-12 h-12 text-neutral-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    <p class="text-lg font-medium mb-1">No hay transacciones</p>
-                    <p class="text-sm">Registra tu primera transacción para comenzar</p>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+          <Column field="date" header="Fecha" sortable style="min-width: 120px">
+            <template #body="slotProps">
+              <span class="text-sm text-text-primary">
+                {{ formatDate(slotProps.data.date || slotProps.data.fecha) }}
+              </span>
+            </template>
+          </Column>
 
-        <!-- Paginación -->
-        <div v-if="totalPages > 1" class="px-6 py-4 border-t border-neutral-100 flex items-center justify-between">
-          <div class="flex items-center text-sm text-text-muted">
-            Mostrando {{ startIndex + 1 }} a {{ Math.min(endIndex, totalTransactions) }} de {{ totalTransactions }} transacciones
-          </div>
+          <Column field="description" header="Descripción" sortable style="min-width: 200px">
+            <template #body="slotProps">
+              <span class="text-sm font-medium text-text-primary">
+                {{ slotProps.data.description || slotProps.data.descripcion }}
+              </span>
+            </template>
+          </Column>
 
-          <div class="flex items-center space-x-2">
-            <button
-              @click="previousPage"
-              :disabled="currentPage === 1"
-              class="px-3 py-2 text-sm font-medium text-text-primary bg-background-light rounded-lg hover:bg-neutral-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Anterior
-            </button>
+          <Column field="category_id" header="Categoría" sortable style="min-width: 150px">
+            <template #body="slotProps">
+              <Tag :value="getCategoryName(slotProps.data.category_id || slotProps.data.categoria_id)"
+                :class="getCategoryBadgeClass(slotProps.data)" class="text-xs font-medium" />
+            </template>
+          </Column>
 
-            <span class="px-3 py-2 text-sm font-medium text-text-primary">
-              {{ currentPage }} de {{ totalPages }}
-            </span>
+          <Column field="account_id" header="Cuenta" sortable style="min-width: 150px">
+            <template #body="slotProps">
+              <span class="text-sm text-text-muted">
+                {{ getAccountName(slotProps.data.account_id || slotProps.data.cuenta_id) }}
+              </span>
+            </template>
+          </Column>
 
-            <button
-              @click="nextPage"
-              :disabled="currentPage === totalPages"
-              class="px-3 py-2 text-sm font-medium text-text-primary bg-background-light rounded-lg hover:bg-neutral-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Siguiente
-            </button>
-          </div>
-        </div>
+          <Column field="amount" header="Monto" sortable style="min-width: 130px">
+            <template #body="slotProps">
+              <span class="text-sm font-semibold" :class="getAmountColor(slotProps.data)">
+                {{ formatAmount(slotProps.data) }}
+              </span>
+            </template>
+          </Column>
+
+          <Column header="Acciones" style="min-width: 120px" bodyStyle="text-align: center">
+            <template #body="slotProps">
+              <div class="flex items-center justify-center space-x-2">
+                <Button icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-primary"
+                  @click="openEditModal(slotProps.data)" v-tooltip.top="'Editar'" aria-label="Editar" />
+                <Button icon="pi pi-trash" class="p-button-rounded p-button-text p-button-danger"
+                  @click="confirmDelete(slotProps.data.id)" v-tooltip.top="'Eliminar'" aria-label="Eliminar" />
+              </div>
+            </template>
+          </Column>
+        </DataTable>
       </div>
     </div>
 
     <!-- Modal de transacción -->
-    <TransaccionModal
-      v-model:visible="showModal"
-      :transaction="selectedTransaction"
-      :is-edit="isEditMode"
-      :accounts="cuentas"
-      :categories="categorias"
-      @saved="handleTransactionSaved"
-    />
+    <TransaccionModal v-model:visible="showModal" :transaction="selectedTransaction" :is-edit="isEditMode"
+      :accounts="cuentas" :categories="categorias" @saved="handleTransactionSaved" />
   </div>
 </template>
 
 <script setup>
-import {ref, computed, onMounted} from 'vue';
-import {useTransaccionesStore} from '../../../../stores/transactionStore.js';
-import {storeToRefs} from 'pinia';
-import {useConfirm} from "primevue/useconfirm";
-import {useToast} from "primevue/usetoast";
+import { ref, computed, onMounted } from 'vue';
+import { useTransaccionesStore } from '../../../../stores/transactionStore.js';
+import { storeToRefs } from 'pinia';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
 
 import TransaccionModal from '../components/TransaccionModal.vue';
 import Button from 'primevue/button';
 import ConfirmDialog from 'primevue/confirmdialog';
 import Toast from 'primevue/toast';
 import Dropdown from 'primevue/dropdown';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import Tag from 'primevue/tag';
+import InputText from 'primevue/inputtext';
 
 const store = useTransaccionesStore();
 const confirm = useConfirm();
 const toast = useToast();
 
-const {transacciones, accounts, categories, isLoading} = storeToRefs(store);
-const {fetchTransactions, fetchCategories, fetchAccounts, addTransaccion, updateTransaccion, deleteTransaccion} = store;
+const { transacciones, accounts, categories, isLoading } = storeToRefs(store);
+const { fetchTransactions, fetchCategories, fetchAccounts, addTransaccion, updateTransaccion, deleteTransaccion } = store;
 
 const showModal = ref(false);
 const selectedTransaction = ref(null);
 const isEditMode = ref(false);
-const currentPage = ref(1);
-const itemsPerPage = ref(10);
 const filtroCategoria = ref(null);
 const filtroCuenta = ref(null);
+const globalFilter = ref('');
 
 // Computed properties necesarios
 const cuentas = computed(() => accounts.value || []);
@@ -237,38 +179,35 @@ const cuentasFiltro = computed(() => [
   ...((accounts.value || []).map(acc => ({ label: acc.name, value: acc.id })))
 ]);
 
-// Paginación
-const totalTransactions = computed(() => (transacciones.value || []).length);
-const totalPages = computed(() => Math.ceil(totalTransactions.value / itemsPerPage.value));
-const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage.value);
-const endIndex = computed(() => startIndex.value + itemsPerPage.value);
-
-const paginatedTransactions = computed(() => {
-  const transactions = transacciones.value || [];
-  return transactions.slice(startIndex.value, endIndex.value);
-});
-
 // Aplicar filtros a las transacciones
 const filteredTransactions = computed(() => {
-  return (transacciones.value || []).filter(transaction => {
-    const byCategory = filtroCategoria.value ? transaction.category_id === filtroCategoria.value : true;
-    const byAccount = filtroCuenta.value ? transaction.account_id === filtroCuenta.value : true;
-    return byCategory && byAccount;
-  });
+  let filtered = transacciones.value || [];
+
+  // Filtro por categoría
+  if (filtroCategoria.value) {
+    filtered = filtered.filter(transaction =>
+      (transaction.category_id || transaction.categoria_id) === filtroCategoria.value
+    );
+  }
+
+  // Filtro por cuenta
+  if (filtroCuenta.value) {
+    filtered = filtered.filter(transaction =>
+      (transaction.account_id || transaction.cuenta_id) === filtroCuenta.value
+    );
+  }
+
+  // Filtro global por descripción
+  if (globalFilter.value) {
+    const searchTerm = globalFilter.value.toLowerCase();
+    filtered = filtered.filter(transaction => {
+      const description = (transaction.description || transaction.descripcion || '').toLowerCase();
+      return description.includes(searchTerm);
+    });
+  }
+
+  return filtered;
 });
-
-// Funciones de paginación
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++;
-  }
-};
-
-const previousPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--;
-  }
-};
 
 // Cargar datos al montar el componente
 onMounted(async () => {
@@ -294,7 +233,7 @@ const openCreateModal = () => {
 };
 
 const openEditModal = (transaccion) => {
-  selectedTransaction.value = {...transaccion};
+  selectedTransaction.value = { ...transaccion };
   isEditMode.value = true;
   showModal.value = true;
 };
@@ -328,13 +267,13 @@ const confirmDelete = (transactionId) => {
 
 const handleTransactionSaved = async (data) => {
   let result;
-  
+
   if (data.id) {
     result = await updateTransaccion(data);
   } else {
     result = await addTransaccion(data);
   }
-  
+
   if (result?.success) {
     const message = data.id ? 'actualizada' : 'creada';
     toast.add({
@@ -407,19 +346,19 @@ const getIconPath = (cuenta) => {
   return 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z';
 };
 
-// Nueva función para obtener la clase de la etiqueta de categoría (minimalista)
+// Función para obtener la severidad del tag de categoría
 const getCategoryBadgeClass = (transaction) => {
   const categoryName = getCategoryName(transaction.category_id || transaction.categoria_id).toLowerCase();
   if (categoryName.includes('comida') || categoryName.includes('food')) {
-    return 'bg-danger-100 text-danger-600';
+    return 'p-tag-danger';
   }
   if (categoryName.includes('transporte') || categoryName.includes('transport')) {
-    return 'bg-primary/10 text-primary';
+    return 'p-tag-info';
   }
   if (categoryName.includes('entretenimiento') || categoryName.includes('entertainment')) {
-    return 'bg-warning-100 text-warning-600';
+    return 'p-tag-warning';
   }
-  return 'bg-neutral-100 text-neutral-600';
+  return 'p-tag-secondary';
 };
 
 // Nueva función para formatear la cantidad con signo (minimalista)
