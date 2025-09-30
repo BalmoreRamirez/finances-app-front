@@ -1,11 +1,10 @@
-import apiClient, { clearAppState } from './api';
+import apiClient, {clearAppState} from './api';
 
 export default {
     login(email, password) {
-        return apiClient.post('/login', { email, password });
+        return apiClient.post('/login', {email, password});
     },
 
-    // Función para cerrar sesión manualmente
     logout() {
         clearAppState();
         if (typeof window !== 'undefined') {
@@ -13,7 +12,6 @@ export default {
         }
     },
 
-    // Verificar si hay un token válido
     isAuthenticated() {
         return !!localStorage.getItem('accessToken');
     }

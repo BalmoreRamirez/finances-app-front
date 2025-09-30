@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const isDevelopment = import.meta.env.MODE === 'development';
 const baseURL = isDevelopment 
-    ? 'http://localhost:3001/'
+    ? 'http://localhost:3000/'
     : 'https://finances-app-back.onrender.com';
 
 const apiClient = axios.create({
@@ -11,36 +11,25 @@ const apiClient = axios.create({
     headers: {
         'Content-Type': 'application/json'
     },
-    timeout: 60000, // 60 segundos timeout (aumentado para Render)
+    timeout: 60000,
 });
 
-// Cache simple para peticiones GET
+
 const cache = new Map();
 const CACHE_TIME = 5 * 60 * 1000; // 5 minutos
 
-// Función para limpiar el estado de la aplicación cuando el token expire
+
 const clearAppState = () => {
-    // Limpiar localStorage
     localStorage.removeItem('accessToken');
-    
-    // Limpiar cache de API
     cache.clear();
-    
-    // Si hay stores de Pinia, podrían limpiarse aquí
-    // Por ejemplo: const { $reset } = useAuthStore();
-    // $reset();
-    
-    console.log('Estado de la aplicación limpiado por token expirado');
 };
 
-// Interceptor para añadir el token a las cabeceras de todas las peticiones
 apiClient.interceptors.request.use(config => {
     const token = localStorage.getItem('accessToken');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // Agregar cache para GET requests
+
     if (config.method === 'get') {
         const cacheKey = `${config.url}-${JSON.stringify(config.params)}`;
         const cached = cache.get(cacheKey);
@@ -55,7 +44,6 @@ apiClient.interceptors.request.use(config => {
     return Promise.reject(error);
 });
 
-// Interceptor para respuestas
 apiClient.interceptors.response.use(response => {
     // Cache GET responses
     if (response.config.method === 'get') {
@@ -67,24 +55,15 @@ apiClient.interceptors.response.use(response => {
     }
     return response;
 }, error => {
-    // Manejar token expirado o no autorizado
     if (error.response?.status === 401) {
-        console.warn('Token expirado o inválido detectado');
-        
-        // Limpiar el estado de la aplicación
         clearAppState();
-        
-        // Evitar redirecciones infinitas
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
             console.log('Redirigiendo al login...');
             window.location.href = '/login';
         }
     }
-    
     return Promise.reject(error);
 });
-
-// Función de retry para peticiones fallidas
 const retryRequest = async (originalRequest, retryCount = 0) => {
     const maxRetries = 3;
     const retryDelay = Math.pow(2, retryCount) * 1000; // Exponential backoff
@@ -92,10 +71,6 @@ const retryRequest = async (originalRequest, retryCount = 0) => {
     if (retryCount >= maxRetries) {
         throw originalRequest;
     }
-    
-    console.log(`Reintentando petición (intento ${retryCount + 1}/${maxRetries})...`);
-    
-    // Esperar antes del retry
     await new Promise(resolve => setTimeout(resolve, retryDelay));
     
     try {
@@ -106,25 +81,20 @@ const retryRequest = async (originalRequest, retryCount = 0) => {
     }
 };
 
-// Función helper para hacer peticiones con retry automático
 export const apiRequest = async (config) => {
     try {
         const response = await apiClient(config);
         return response;
     } catch (error) {
-        // Solo hacer retry en errores de timeout o conectividad
         if (error.code === 'ECONNABORTED' || 
             error.code === 'NETWORK_ERROR' || 
             error.response?.status >= 500) {
             console.warn('Error de conectividad detectado, intentando retry...', error.message);
             return retryRequest(error);
         }
-        // Para otros errores, fallar inmediatamente
         throw error;
     }
 };
 
 export default apiClient;
-
-// Exportar función de limpieza para uso externo si es necesario
 export { clearAppState };

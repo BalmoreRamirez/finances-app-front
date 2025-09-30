@@ -235,7 +235,7 @@ const dataInvestment = computed(() =>
           id: investment.id,
           name: investment.name || investment.nombre || "-",
           type: investment.investment_type?.name || nameType(investment.investment_type_id) || "-",
-          account: getAccountName(investment.cuenta_id),
+          account: investment.account.name,
           amount_invested: parseFloat(investment.principal || 0),
           profit: parseFloat(investment.expected_return || 0),
           paid: getTotalPagado(investment),

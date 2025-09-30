@@ -2,8 +2,8 @@
 import axios from 'axios';
 
 const isDevelopment = import.meta.env.MODE === 'development';
-const baseURL = isDevelopment 
-    ? 'http://localhost:3001/'
+const baseURL = isDevelopment
+    ? 'http://localhost:3000/'
     : 'https://finances-app-back.onrender.com/';
 
 const authApi = axios.create({
@@ -15,6 +15,9 @@ const authApi = axios.create({
 
 export default {
     login(email, password) {
-        return authApi.post('/login', { email, password });
+        return authApi.post('/login', {
+                email, password
+            }
+        );
     }
 };
