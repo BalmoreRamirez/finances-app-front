@@ -96,23 +96,23 @@
         <DataTable :value="dataInvestment"
                    paginator
                    :rows="7"
-
+                   size="small"
                    tableStyle="min-width: 50rem">
           <Column field="id" header="ID"></Column>
-          <Column field="name" header="Inversión" sortable=""></Column>
-          <Column field="type" header="Tipo" sortable=""></Column>
-          <Column field="account" header="Cuenta" sortable=""></Column>
-          <Column field="amount_invested" header="Monto Invertido" sortable="">
+          <Column field="name" header="Inversión"></Column>
+          <Column field="type" header="Tipo"></Column>
+          <Column field="account" header="Cuenta"></Column>
+          <Column field="amount_invested" header="Monto Invertido">
             <template #body="slotProps">
               {{ formatCurrency(slotProps.data.amount_invested) }}
             </template>
           </Column>
-          <Column field="profit" header="Ganancia" sortable="">
+          <Column field="profit" header="Ganancia">
             <template #body="slotProps">
               {{ formatCurrency(slotProps.data.profit) }}
             </template>
           </Column>
-          <Column field="paid" header="Total pagado" sortable="">
+          <Column field="paid" header="Total pagado">
             <template #body="slotProps">
               {{ formatCurrency(slotProps.data.paid) }}
             </template>
@@ -127,7 +127,7 @@
           </Column>
           <Column header="Acciones">
             <template #body="slotProps">
-              <div class="flex items-center justify-center space-x-2">
+              <div class="flex items-center justify-start space-x-2">
                 <button
                     @click="openEditModal(slotProps.data)"
                     class="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
@@ -226,13 +226,13 @@ const pagosPorInversion = ref({});
 
 // Computed Properties
 const accounts = computed(() => accountForSelect.value || []);
-
+let cont = 0;
 const dataInvestment = computed(() =>
     investments.value
         .slice() // Crear una copia para no mutar el estado original
         .sort((a, b) => new Date(b.start_date) - new Date(a.start_date)) // Ordenar por fecha descendente
-        .map((investment) => ({
-          id: investment.id,
+        .map((investment, index) => ({
+          id: index+1,
           name: investment.name || investment.nombre || "-",
           type: investment.investment_type?.name || nameType(investment.investment_type_id) || "-",
           account: investment.account.name,
